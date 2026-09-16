@@ -1,0 +1,21 @@
+scripts/setup.sh
+  s_02ff77cdec2678::t_119d76ca7253f0 225-231,234-252
+README.md
+  s_02ff77cdec2678::t_119d76ca7253f0 60-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f3484fd525e68774eb5712e62195598b3466ac92",
+  "prompts": {},
+  "sessions": {
+    "s_02ff77cdec2678": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a6b6-7a28-70f3-9e26-9081d4ec98c9",
+        "model": "gpt-daybreak-blue-latest"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    }
+  }
+}
