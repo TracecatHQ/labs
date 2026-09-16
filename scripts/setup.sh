@@ -222,9 +222,34 @@ api_json() {
   fi
 }
 
+legacy_workspace_count="$(cut -f2 "$legacy_workspace_file" | sort -u | awk 'NF {count++} END {print count+0}')"
+if [[ "$legacy_workspace_count" -gt 1 ]]; then
+  legacy_workspaces="$(awk -F '\t' '{print $1 "=" $2}' "$legacy_workspace_file" | paste -sd ', ' -)"
+  die "multiple legacy lab workspaces found ($legacy_workspaces); migrate one lab deployment at a time"
+fi
+legacy_workspace_id="$(cut -f2 "$legacy_workspace_file" | head -n 1)"
+
 org_id=""
 api_get /organization/memberships
-org_id="$(jq -r 'map(select(.name == "Tracecat Labs"))[0].id // empty' "$response_file")"
+organization_memberships="$(<"$response_file")"
+
+if [[ -n "$legacy_workspace_id" ]]; then
+  legacy_org_id=""
+  while IFS= read -r membership_org_id; do
+    org_id="$membership_org_id"
+    api_get /workspaces
+    if jq -e --arg id "$legacy_workspace_id" 'any(.[]; .id == $id)' "$response_file" >/dev/null; then
+      legacy_org_id="$org_id"
+      break
+    fi
+  done < <(jq -r '.[].id' <<<"$organization_memberships")
+  org_id="$legacy_org_id"
+  [[ -n "$org_id" ]] || die "legacy lab workspace $legacy_workspace_id was not found in the signed-in user's organizations"
+  unset legacy_org_id membership_org_id
+else
+  org_id="$(jq -r 'map(select(.name == "Tracecat Labs"))[0].id // empty' <<<"$organization_memberships")"
+fi
+unset organization_memberships
 
 if [[ -z "$org_id" ]]; then
   api_get /admin/organizations
@@ -250,12 +275,6 @@ fi
 # deployment-owned workspace so the labs do not need multi_workspace access.
 api_get /workspaces
 configured_workspace_id="$(env_value TRACECAT_WORKSPACE_ID)"
-legacy_workspace_count="$(cut -f2 "$legacy_workspace_file" | sort -u | awk 'NF {count++} END {print count+0}')"
-if [[ "$legacy_workspace_count" -gt 1 ]]; then
-  legacy_workspaces="$(awk -F '\t' '{print $1 "=" $2}' "$legacy_workspace_file" | paste -sd ', ' -)"
-  die "multiple legacy lab workspaces found ($legacy_workspaces); migrate one lab deployment at a time"
-fi
-legacy_workspace_id="$(cut -f2 "$legacy_workspace_file" | head -n 1)"
 if [[ -n "$configured_workspace_id" && -n "$legacy_workspace_id" && "$configured_workspace_id" != "$legacy_workspace_id" ]]; then
   die "TRACECAT_WORKSPACE_ID does not match the retained legacy lab workspace $legacy_workspace_id"
 fi

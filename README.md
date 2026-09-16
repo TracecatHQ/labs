@@ -57,7 +57,8 @@ just export 001 RUN_ID=<candidate-run-id>
 
 `just setup` preserves an existing Compose project name and adds its matching
 Tracecat network to `.env`. If the previous Terraform state owns a per-lab
-workspace, setup selects that same workspace and tells you to run:
+workspace, setup finds its owning organization through your memberships,
+selects that same workspace, and tells you to run:
 
 ```bash
 just migrate-workspace 001
