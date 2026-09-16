@@ -1,0 +1,27 @@
+README.md
+  s_02ff77cdec2678::t_fc07ab34107020 56-72
+scripts/setup.sh
+  s_02ff77cdec2678::t_340cedb4e54ff3 253-265,277,387-391
+  s_02ff77cdec2678::t_12a87bff400f26 16
+  s_02ff77cdec2678::t_37693b95fb92f2 30,65-96
+  s_02ff77cdec2678::t_1d45fe04d1e207 97
+Justfile
+  s_02ff77cdec2678::t_dc396dd7c02417 114-124,150-183
+  s_02ff77cdec2678::t_50cc259a0584f3 184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0aad1679c62552cf6ea1f411a03f454c8d7e971b",
+  "prompts": {},
+  "sessions": {
+    "s_02ff77cdec2678": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0a6b6-7a28-70f3-9e26-9081d4ec98c9",
+        "model": "gpt-daybreak-blue-latest"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    }
+  }
+}
