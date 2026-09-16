@@ -10,7 +10,7 @@ definition:
     - ref: get_candidate_rule
       action: core.http_request
       args:
-        url: http://bw-api:8888/configs/supplier.intake.test/modsec/lab003_candidate?with_data=true
+        url: http://bw-api:8888/configs/global/modsec/lab003_candidate?with_data=true
         method: GET
         auth:
           username: lab-admin
@@ -42,7 +42,7 @@ definition:
       depends_on: [should_cleanup]
       run_if: ${{ ACTIONS.owns_candidate_rule.result[0] }}
       args:
-        url: http://bw-api:8888/configs/supplier.intake.test/modsec/lab003_candidate
+        url: http://bw-api:8888/configs/global/modsec/lab003_candidate
         method: DELETE
         auth:
           username: lab-admin
@@ -57,8 +57,7 @@ definition:
         url: http://bunkerweb:8080/__lab_003_activation
         method: GET
         headers:
-          Host: supplier.intake.test
-          X-Lab-003-Activation: ${{ TRIGGER.orig_wf_exec_id }}
+          Host: target.lab.test
         poll_condition: "lambda response: response['status_code'] != 418"
         poll_interval: 1
         poll_max_attempts: 60
@@ -71,8 +70,7 @@ definition:
         url: http://bunkerweb:8080/__lab_003_activation
         method: GET
         headers:
-          Host: supplier.intake.test
-          X-Lab-003-Activation: ${{ TRIGGER.orig_wf_exec_id }}
+          Host: target.lab.test
         poll_condition: "lambda response: response['status_code'] != 418"
         poll_interval: 1
         poll_max_attempts: 60

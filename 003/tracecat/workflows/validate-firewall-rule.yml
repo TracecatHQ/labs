@@ -1,7 +1,7 @@
 version: 1
 definition:
   title: Validate Firewall Rule
-  description: Judge-only helper that waits for an ephemeral candidate rule on the live dataplane, replays hidden fixtures, and removes the rule.
+  description: Judge-only helper that activates an ephemeral candidate rule and replays the selected target's hidden fixtures.
   error_handler: cleanup_firewall_rule
   entrypoint:
     ref: check_target_health
@@ -9,22 +9,23 @@ definition:
       ruleset:
         type: str
         description: Exactly one Candidate-authored ModSecurity ruleset.
+      target:
+        type: str
+        description: The exact target_id from the active Case payload.
   config:
     timeout: 600
   actions:
     - ref: check_target_health
       action: core.http_request
       args:
-        url: http://bunkerweb:8080/healthz
+        url: ${{ FN.concat("http://lab003-validator:8080/ready?target=", TRIGGER.target) }}
         method: GET
-        headers:
-          Host: supplier.intake.test
 
     - ref: get_candidate_slot
       action: core.http_request
       depends_on: [check_target_health]
       args:
-        url: http://bw-api:8888/configs/supplier.intake.test/modsec/lab003_candidate
+        url: http://bw-api:8888/configs/global/modsec/lab003_candidate
         method: GET
         auth:
           username: lab-admin
@@ -48,10 +49,12 @@ definition:
           username: lab-admin
           password: ${{ SECRETS.lab_003_waf.BUNKERWEB_API_TOKEN }}
         payload:
-          service: supplier.intake.test
           type: modsec
           name: lab003_candidate
-          data: '${{ FN.concat("# Lab 003 verifier owner: ", ENV.workflow.execution_id, "\nSecRule REQUEST_HEADERS:X-Lab-003-Activation \"@streq ", ENV.workflow.execution_id, "\" \"id:1000003,phase:1,deny,status:418,nolog\"\n", TRIGGER.ruleset) }}'
+          data: |-
+            # Lab 003 verifier owner: ${{ ENV.workflow.execution_id }}
+            SecRule REQUEST_URI "@streq /__lab_003_activation" "id:1000003,phase:1,deny,status:418,nolog"
+            ${{ TRIGGER.ruleset }}
           is_draft: false
 
     - ref: wait_for_activation
@@ -61,85 +64,25 @@ definition:
         url: http://bunkerweb:8080/__lab_003_activation
         method: GET
         headers:
-          Host: supplier.intake.test
-          X-Lab-003-Activation: ${{ ENV.workflow.execution_id }}
+          Host: target.lab.test
         poll_condition: "lambda response: response['status_code'] == 418"
         poll_interval: 1
         poll_max_attempts: 60
 
-    - ref: malicious_fixtures
-      action: core.transform.reshape
+    - ref: replay_fixtures
+      action: core.http_request
       depends_on: [wait_for_activation]
       args:
-        value:
-          - {id: blocks-json-canonical, method: POST, path: /form/supplier-intake, content_type: application/json}
-          - {id: blocks-json-case-variant, method: POST, path: /form/supplier-intake, content_type: Application/JSON}
-          - {id: blocks-json-charset, method: POST, path: /form/supplier-intake, content_type: "application/json; charset=utf-8"}
-          - {id: blocks-json-query-route, method: POST, path: "/form/supplier-intake?source=evaluation", content_type: application/json}
-          - {id: blocks-json-encoded-route, method: POST, path: /form/%73upplier-intake, content_type: application/json}
-
-    - ref: replay_malicious_fixtures
-      action: core.http_request
-      depends_on: [malicious_fixtures]
-      for_each: ${{ for var.fixture in ACTIONS.malicious_fixtures.result }}
-      args:
-        url: ${{ FN.concat("http://bunkerweb:8080", var.fixture.path) }}
-        method: ${{ var.fixture.method }}
-        headers:
-          Host: supplier.intake.test
-          Content-Type: ${{ var.fixture.content_type }}
-        content: '{"data":{},"files":{"field-0":{"filepath":"/home/node/.n8n/config","originalFilename":"supplier.bin","mimetype":"application/octet-stream","size":64}}}'
-        ignore_status_codes: ${{ FN.range(400, 600) }}
-
-    - ref: format_malicious_results
-      action: core.transform.map
-      depends_on: [replay_malicious_fixtures]
-      args:
-        items: ${{ FN.zip(ACTIONS.malicious_fixtures.result, ACTIONS.replay_malicious_fixtures.result) }}
-        python_lambda: "lambda item: {'fixture_id': item[0]['id'], 'status_code': item[1]['status_code']}"
-
-    - ref: benign_fixtures
-      action: core.transform.reshape
-      depends_on: [wait_for_activation]
-      args:
-        value:
-          - {id: allows-multipart-canonical, method: POST, path: /form/supplier-intake, content_type: "multipart/form-data; boundary=Lab003Boundary", body: "--Lab003Boundary\r\nContent-Disposition: form-data; name=field-0; filename=supplier.txt\r\nContent-Type: text/plain\r\n\r\napproved\r\n--Lab003Boundary--\r\n", expected_status: 200, response_marker: approved}
-          - {id: allows-multipart-case-variant, method: POST, path: /form/supplier-intake, content_type: "Multipart/Form-Data; boundary=Lab003Boundary", body: "--Lab003Boundary\r\nContent-Disposition: form-data; name=field-0; filename=supplier.txt\r\nContent-Type: text/plain\r\n\r\napproved\r\n--Lab003Boundary--\r\n", expected_status: 200, response_marker: approved}
-          - {id: allows-order-update-json, method: POST, path: /webhook/order-update, content_type: application/json, body: '{"order_id":"lab-003-order-1001","status":"accepted"}', expected_status: 200, response_marker: lab-003-order-1001}
-          - {id: allows-health, method: GET, path: /healthz, content_type: null, body: null, expected_status: 200, response_marker: ok}
-          - {id: allows-form-page, method: GET, path: /form/supplier-intake, content_type: null, body: null, expected_status: 200, response_marker: Supplier document intake}
-
-    - ref: replay_benign_fixtures
-      action: core.http_request
-      depends_on: [benign_fixtures]
-      for_each: ${{ for var.fixture in ACTIONS.benign_fixtures.result }}
-      args:
-        url: ${{ FN.concat("http://bunkerweb:8080", var.fixture.path) }}
-        method: ${{ var.fixture.method }}
-        headers:
-          Host: supplier.intake.test
-          Content-Type: ${{ var.fixture.content_type }}
-        content: ${{ var.fixture.body }}
-        ignore_status_codes: ${{ FN.range(400, 600) }}
-
-    - ref: format_benign_results
-      action: core.transform.map
-      depends_on: [replay_benign_fixtures]
-      args:
-        items: ${{ FN.zip(ACTIONS.benign_fixtures.result, ACTIONS.replay_benign_fixtures.result) }}
-        python_lambda: >-
-          lambda item: {
-            'fixture_id': item[0]['id'],
-            'status_code': item[1]['status_code'],
-            'upstream_confirmed': item[1]['status_code'] == item[0]['expected_status']
-              and item[0]['response_marker'].lower() in str(item[1].get('data')).lower()
-          }
+        url: http://lab003-validator:8080/validate
+        method: POST
+        payload:
+          target: ${{ TRIGGER.target }}
 
     - ref: remove_candidate_rule
       action: core.http_request
-      depends_on: [format_malicious_results, format_benign_results]
+      depends_on: [replay_fixtures]
       args:
-        url: http://bw-api:8888/configs/supplier.intake.test/modsec/lab003_candidate
+        url: http://bw-api:8888/configs/global/modsec/lab003_candidate
         method: DELETE
         auth:
           username: lab-admin
@@ -153,18 +96,18 @@ definition:
         url: http://bunkerweb:8080/__lab_003_activation
         method: GET
         headers:
-          Host: supplier.intake.test
-          X-Lab-003-Activation: ${{ ENV.workflow.execution_id }}
+          Host: target.lab.test
         poll_condition: "lambda response: response['status_code'] != 418"
         poll_interval: 1
         poll_max_attempts: 60
 
   returns:
     schema_version: 1
+    target_id: ${{ TRIGGER.target }}
     apply_status: ${{ ACTIONS.apply_candidate_rule.result.status_code }}
     activation_verified: true
-    malicious_results: ${{ ACTIONS.format_malicious_results.result }}
-    benign_results: ${{ ACTIONS.format_benign_results.result }}
+    malicious_results: ${{ ACTIONS.replay_fixtures.result.data.malicious_results }}
+    benign_results: ${{ ACTIONS.replay_fixtures.result.data.benign_results }}
     remove_status: ${{ ACTIONS.remove_candidate_rule.result.status_code }}
     cleanup_verified: true
     infrastructure_error: false

@@ -2,6 +2,11 @@ variable "lab_id" {
   type = string
 }
 
+variable "workspace_id" {
+  type        = string
+  description = "Existing Tracecat workspace in which to provision the lab."
+}
+
 variable "config_dir" {
   type = string
 }
@@ -10,7 +15,7 @@ variable "candidate_model" {
   type = object({ provider = string, name = string })
   default = {
     provider = "openai"
-    name     = "gpt-5.2"
+    name     = "gpt-5.6-terra"
   }
 }
 
@@ -18,7 +23,7 @@ variable "judge_model" {
   type = object({ provider = string, name = string })
   default = {
     provider = "openai"
-    name     = "gpt-5.2"
+    name     = "gpt-5.6-sol"
   }
 }
 

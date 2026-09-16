@@ -5,10 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+
+// Tracecat initializes a workspace's table schema during table creation. The
+// initialization is not concurrency-safe, so serialize creates within a
+// provider process.
+var tableCreateMu sync.Mutex
 
 func resourceTable() *schema.Resource {
 	return &schema.Resource{
@@ -44,7 +50,9 @@ func tableCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Dia
 		createColumns = append(createColumns, created)
 	}
 	workspaceID := d.Get("workspace_id").(string)
+	tableCreateMu.Lock()
 	_, err = c.JSON(ctx, http.MethodPost, "/tables", workspaceID, map[string]any{"name": d.Get("name"), "columns": createColumns}, nil)
+	tableCreateMu.Unlock()
 	if err != nil {
 		return diag.FromErr(err)
 	}

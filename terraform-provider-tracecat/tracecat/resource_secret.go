@@ -2,6 +2,7 @@ package tracecat
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -28,7 +29,14 @@ func resourceSecret() *schema.Resource {
 }
 
 func secretPayload(d *schema.ResourceData) (map[string]any, error) {
-	values, err := decodeObject(d.Get("keys_wo_json").(string))
+	raw, configured, err := writeOnlyString(d, "keys_wo_json")
+	if err != nil {
+		return nil, err
+	}
+	if !configured {
+		return nil, fmt.Errorf("keys_wo_json is required")
+	}
+	values, err := decodeObject(raw)
 	if err != nil {
 		return nil, err
 	}

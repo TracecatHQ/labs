@@ -7,6 +7,10 @@ provider_version := "0.1.0"
 default:
     @just --list
 
+# Securely initialize Tracecat, its Terraform service account, and a model provider.
+setup:
+    @bash "{{ root }}/scripts/setup.sh"
+
 provider:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -76,11 +80,32 @@ tracecat-down:
     docker compose --project-directory "$checkout" --env-file "$checkout/.env.example" --env-file "{{ root }}/.env" -f "$checkout/docker-compose.yml" down
 
 # Start a lab's target services. Tracecat must already be running.
-up lab:
-    @docker compose --project-directory "{{ root }}/{{ lab }}" --env-file "{{ root }}/.env" -p "lab-{{ lab }}" -f "{{ root }}/{{ lab }}/compose.yml" up -d
+# Lab 003 accepts target=<Vulhub directory>; its default is n8n.
+up lab target="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    selected="{{ target }}"
+    selected="${selected#target=}"
+    if [[ "{{ lab }}" == "003" ]]; then
+      bash "{{ root }}/scripts/lab-003-target.sh" up "${selected:-n8n}"
+    else
+      [[ -z "$selected" ]] || { echo "The target argument is supported only by Lab 003." >&2; exit 2; }
+      docker compose --project-directory "{{ root }}/{{ lab }}" --env-file "{{ root }}/.env" -p "lab-{{ lab }}" -f "{{ root }}/{{ lab }}/compose.yml" up -d
+    fi
 
 down lab:
-    @docker compose --project-directory "{{ root }}/{{ lab }}" --env-file "{{ root }}/.env" -p "lab-{{ lab }}" -f "{{ root }}/{{ lab }}/compose.yml" down
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [[ "{{ lab }}" == "003" ]]; then
+      bash "{{ root }}/scripts/lab-003-target.sh" down
+    else
+      docker compose --project-directory "{{ root }}/{{ lab }}" --env-file "{{ root }}/.env" -p "lab-{{ lab }}" -f "{{ root }}/{{ lab }}/compose.yml" down
+    fi
+
+# List Lab 003 targets that include scored fixtures.
+targets lab="003":
+    @test "{{ lab }}" = "003" || { echo "Target catalogs are currently available only for Lab 003." >&2; exit 2; }
+    @bash "{{ root }}/scripts/lab-003-target.sh" list
 
 _terraform lab command:
     #!/usr/bin/env bash
@@ -102,6 +127,7 @@ _terraform lab command:
     export TF_VAR_secret_values="$secret_values"
     export TF_VAR_candidate_model="$candidate_model"
     export TF_VAR_judge_model="$judge_model"
+    export TF_VAR_workspace_id="${TRACECAT_WORKSPACE_ID:?run just setup to select the Tracecat workspace}"
     terraform -chdir="{{ root }}/{{ lab }}/terraform" "{{ command }}"
 
 plan lab:
@@ -118,6 +144,19 @@ run lab CASE_IDS="":
     workflow_id="$(terraform -chdir="{{ root }}/{{ lab }}/terraform" output -json workflow_ids | jq -r .candidate_run)"
     case_ids_value="{{ CASE_IDS }}"
     case_ids_value="${case_ids_value#CASE_IDS=}"
+    if [[ "{{ lab }}" == "003" ]]; then
+      state="{{ root }}/.cache/lab-003/active-target.json"
+      [[ -f "$state" ]] || { echo "Start a Lab 003 target with: just up 003 [target=<directory>]" >&2; exit 2; }
+      active_case="$(jq -r '.case_id // ""' "$state")"
+      scored="$(jq -r .scored "$state")"
+      [[ "$scored" == true && -n "$active_case" ]] || { echo "The active target is exploratory and has no scored Case." >&2; exit 2; }
+      if [[ -z "$case_ids_value" ]]; then
+        case_ids_value="$active_case"
+      elif [[ "$case_ids_value" != "$active_case" ]]; then
+        echo "The active target supports only Case $active_case; got $case_ids_value." >&2
+        exit 2
+      fi
+    fi
     case_ids="$(jq -cn --arg value "$case_ids_value" '$value | if length == 0 then [] else split(",") end')"
     payload="$(jq -cn --arg workflow_id "$workflow_id" --argjson case_ids "$case_ids" '{workflow_id:$workflow_id,inputs:{case_ids:$case_ids}}')"
     response="$(curl -fsS -H "Authorization: Bearer $TRACECAT_API_KEY" -H 'Content-Type: application/json' -d "$payload" "$TRACECAT_API_URL/workspaces/$workspace_id/workflow-executions")"
@@ -184,8 +223,12 @@ check:
     #!/usr/bin/env bash
     set -euo pipefail
     grep -Fxq 'TRACECAT_VERSION=1.0.0-rc.1' "{{ root }}/.env.example"
+    grep -Fxq 'COMPOSE_PROJECT_NAME=tracecat-labs' "{{ root }}/.env.example"
+    grep -Fxq 'TRACECAT_DOCKER_NETWORK=tracecat-labs_core' "{{ root }}/.env.example"
     ! grep -q '^TRACECAT__FEATURE_FLAGS=' "{{ root }}/.env.example"
     grep -Fxq 'TRACECAT__EE_MULTI_TENANT=true' "{{ root }}/.env.example"
+    grep -Fxq 'TRACECAT__AUTH_SUPERADMIN_EMAIL=admin@tracecat.com' "{{ root }}/.env.example"
+    bash -n "{{ root }}/scripts/setup.sh"
     found=0
     for lab_dir in "{{ root }}"/[0-9][0-9][0-9]; do
       [[ -d "$lab_dir/terraform" ]] || continue

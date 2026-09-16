@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -34,6 +35,23 @@ func decodeObject(raw string) (map[string]any, error) {
 		return nil, fmt.Errorf("config_json must be a JSON object: %w", err)
 	}
 	return value, nil
+}
+
+func writeOnlyString(d *schema.ResourceData, name string) (string, bool, error) {
+	value, diags := d.GetRawConfigAt(cty.GetAttrPath(name))
+	if diags.HasError() {
+		return "", false, fmt.Errorf("read write-only argument %s: %s", name, diags[0].Detail)
+	}
+	if !value.IsKnown() {
+		return "", false, fmt.Errorf("write-only argument %s is unknown during apply", name)
+	}
+	if value.IsNull() {
+		return "", false, nil
+	}
+	if !value.Type().Equals(cty.String) {
+		return "", false, fmt.Errorf("write-only argument %s must be a string", name)
+	}
+	return value.AsString(), true, nil
 }
 
 func canonicalSubset(remote, desired map[string]any) map[string]any {
