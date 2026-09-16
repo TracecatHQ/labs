@@ -1,7 +1,8 @@
 # Tracecat labs
 
 Security-agent evaluations provisioned as Tracecat configuration. Terraform
-owns Tracecat resources, Docker Compose owns only scenario targets, and `just`
+owns lab resources in Tracecat's deployment workspace, Docker Compose owns only
+scenario targets, and `just`
 provides thin lifecycle and REST wrappers. The repository has no lab CLI,
 Python control runtime, or copied Tracecat source tree.
 
@@ -23,21 +24,22 @@ stored or graded artifact.
 > API access. They are intended only for training, experimentation, and
 > evaluation.
 
-Requirements: Terraform 1.11+, Go, Docker, `just`, `jq`, `curl`, Git LFS, and
-Ruby.
+Requirements: Terraform 1.11+, Go, Docker, `just`, `jq`, `curl`, `openssl`, Git
+LFS, and Ruby.
 
-Copy `.env.example` to `.env`, replace the runtime and target placeholders, and
-start Tracecat:
+Run the interactive setup. It creates a mode-`0600` `.env`, generates local
+infrastructure secrets, starts Tracecat, provisions a least-privilege Terraform
+service account, selects the deployment workspace, and sends one model-provider
+credential directly to Tracecat:
 
 ```bash
-just tracecat-up
+just setup
 ```
 
-Startup waits for Tracecat to become healthy and configures its default tier
-with only the `service_accounts` entitlement needed for API access. In
-Tracecat, configure the model providers named in `.env` and create an
-organization service-account API key with workspace administration scopes. Put
-the key in `.env`, then run:
+Password and API-key input is hidden. The Tracecat login password and model
+credential are never written to `.env`; only the generated Terraform service
+account key is stored there. Startup configures the default tier with only the
+`service_accounts` entitlement needed for API access. Then run:
 
 ```bash
 just init 001
@@ -50,6 +52,24 @@ just judge 001 RUN_ID=<candidate-run-id>
 just status 001 RUN_ID=<judge-run-id>
 just export 001 RUN_ID=<candidate-run-id>
 ```
+
+### Upgrading an existing checkout
+
+`just setup` preserves an existing Compose project name and adds its matching
+Tracecat network to `.env`. If the previous Terraform state owns a per-lab
+workspace, setup finds its owning organization through your memberships,
+selects that same workspace, and tells you to run:
+
+```bash
+just migrate-workspace 001
+just plan 001
+```
+
+Migration first verifies the selected workspace ID, writes a mode-`0600` state
+backup under `.cache/terraform-migrations/`, and forgets only Terraform's
+ownership of the workspace container. The tables, workflows, presets, retained
+runs, and scores remain in place. `just plan` and `just apply` refuse to proceed
+while unmigrated legacy workspace state is present.
 
 Use one applied lab workspace per Tracecat deployment. Tracecat 1.0.0-rc.1
 requires the `multi_workspace` entitlement to create another workspace, and the
@@ -67,7 +87,7 @@ to `NNN/results/<candidate-run-id>/scores.csv`.
 |---|---|---|
 | [001](001/) | Investigate one EventBridge alert and write an evidence-backed incident timeline | True-positive hard gate plus 16 weighted findings |
 | [002](002/) | Classify 20 BOTSv3 alerts from bounded evidence objects | Exact-evidence hard gate; determination 50; incident relevance 50 |
-| [003](003/) | Turn a vulnerability report into a deployable ModSecurity ruleset | Deployability hard gate; five malicious and five benign fixtures |
+| [003](003/) | Mitigate one of eight unauthenticated vulnerability targets with a deployable ModSecurity ruleset | Deployability hard gate; five malicious and five benign fixtures per target |
 
 ## Adding a lab
 

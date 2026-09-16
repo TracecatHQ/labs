@@ -124,7 +124,6 @@ secrets, and helper workflows:
 ```json
 {
   "schema_version": 1,
-  "workspace_name": "Lab NNN — Title",
   "agent_presets": [
     {
       "name": "Candidate",

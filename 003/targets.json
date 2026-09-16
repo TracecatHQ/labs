@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "vulhub_commit": "aeaf65793f147f29bd50841ef77f4e9cad07ecc7",
+  "targets": [
+    {
+      "id": "n8n",
+      "case_id": "n8n-supplier-intake-file-read",
+      "title": "n8n supplier intake arbitrary file read",
+      "service": "n8n",
+      "port": 5678,
+      "ready_path": "/healthz"
+    },
+    {
+      "id": "bash/CVE-2014-6271",
+      "case_id": "shellshock-header-command-injection",
+      "title": "Bash Shellshock HTTP header command injection",
+      "service": "web",
+      "port": 80,
+      "ready_path": "/safe.cgi"
+    },
+    {
+      "id": "httpd/CVE-2021-41773",
+      "case_id": "apache-httpd-path-traversal",
+      "title": "Apache HTTP Server path traversal",
+      "service": "apache",
+      "port": 80,
+      "ready_path": "/"
+    },
+    {
+      "id": "python/CVE-2024-23334",
+      "case_id": "aiohttp-directory-traversal",
+      "title": "aiohttp static route directory traversal",
+      "service": "aiohttp-app",
+      "port": 8080,
+      "ready_path": "/"
+    },
+    {
+      "id": "httpd/CVE-2021-40438",
+      "case_id": "apache-httpd-mod-proxy-ssrf",
+      "title": "Apache HTTP Server mod_proxy SSRF",
+      "service": "apache",
+      "port": 80,
+      "ready_path": "/"
+    },
+    {
+      "id": "langflow/CVE-2025-3248",
+      "case_id": "langflow-validate-code-rce",
+      "title": "Langflow validate/code pre-auth RCE",
+      "service": "web",
+      "port": 7860,
+      "ready_path": "/"
+    },
+    {
+      "id": "metabase/CVE-2023-38646",
+      "case_id": "metabase-jdbc-rce",
+      "title": "Metabase pre-auth JDBC RCE",
+      "service": "web",
+      "port": 3000,
+      "ready_path": "/api/health"
+    },
+    {
+      "id": "cmsms/CVE-2019-9053",
+      "case_id": "cmsms-news-sqli",
+      "title": "CMS Made Simple unauthenticated SQL injection",
+      "service": "web",
+      "port": 80,
+      "ready_path": "/install.php",
+      "platform": "linux/amd64"
+    }
+  ]
+}

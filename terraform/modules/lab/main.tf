@@ -107,21 +107,10 @@ locals {
   }
 }
 
-resource "tracecat_workspace" "lab" {
-  name = local.manifest.workspace_name
-
-  lifecycle {
-    precondition {
-      condition     = length(local.manifest.agent_presets) == 2 && toset(keys(local.presets)) == toset(["candidate", "judge"])
-      error_message = "tracecat.json must define exactly the candidate and judge presets."
-    }
-  }
-}
-
 resource "tracecat_table" "platform" {
   for_each = local.table_columns
 
-  workspace_id = tracecat_workspace.lab.id
+  workspace_id = var.workspace_id
   name         = each.key
   columns_json = jsonencode(each.value)
 }
@@ -129,7 +118,7 @@ resource "tracecat_table" "platform" {
 resource "tracecat_table_row" "case_template" {
   for_each = local.cases
 
-  workspace_id    = tracecat_workspace.lab.id
+  workspace_id    = var.workspace_id
   table_id        = tracecat_table.platform["case_templates"].id
   identity_column = "case_id"
   identity_value  = each.key
@@ -150,7 +139,7 @@ resource "tracecat_table_row" "case_template" {
 resource "tracecat_agent_preset" "preset" {
   for_each = local.presets
 
-  workspace_id = tracecat_workspace.lab.id
+  workspace_id = var.workspace_id
   config_json = jsonencode({
     for key, value in merge(
       { for key, value in each.value : key => value if !contains(["instructions_file", "mcp_catalog_slugs"], key) },
@@ -169,7 +158,7 @@ resource "tracecat_agent_preset" "preset" {
 resource "tracecat_workflow" "workflow" {
   for_each = local.workflows
 
-  workspace_id = tracecat_workspace.lab.id
+  workspace_id = var.workspace_id
   filename     = each.value.file
   alias        = each.key
   yaml         = file(each.value.path)
@@ -185,7 +174,7 @@ resource "tracecat_workflow" "workflow" {
 resource "tracecat_mcp_integration" "integration" {
   for_each = local.integrations
 
-  workspace_id           = tracecat_workspace.lab.id
+  workspace_id           = var.workspace_id
   catalog_slug           = each.value.catalog_slug
   connection_option_id   = try(each.value.connection_option_id, null)
   name                   = try(each.value.name, null)
@@ -200,7 +189,7 @@ resource "tracecat_mcp_integration" "integration" {
 resource "tracecat_secret" "secret" {
   for_each = local.secrets
 
-  workspace_id    = tracecat_workspace.lab.id
+  workspace_id    = var.workspace_id
   name            = each.key
   description     = try(each.value.description, null)
   environment     = try(each.value.environment, "default")

@@ -49,8 +49,10 @@ func mcpCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagn
 		_, err = c.JSON(ctx, http.MethodPost, "/mcp-integrations/catalog/"+d.Get("catalog_slug").(string)+"/connect", d.Get("workspace_id").(string), payload, &out)
 	} else {
 		headers := map[string]any{}
-		if value, ok := d.GetOk("custom_headers_wo_json"); ok {
-			headers, err = decodeObject(value.(string))
+		if value, configured, readErr := writeOnlyString(d, "custom_headers_wo_json"); readErr != nil {
+			return diag.FromErr(readErr)
+		} else if configured {
+			headers, err = decodeObject(value)
 			if err != nil {
 				return diag.FromErr(err)
 			}

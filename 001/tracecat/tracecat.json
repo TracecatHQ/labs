@@ -1,6 +1,5 @@
 {
   "schema_version": 1,
-  "workspace_name": "Lab 001 — The Bigger Interview",
   "mcp_integrations": [
     {
       "catalog_slug": "splunk-mcp",

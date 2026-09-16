@@ -1,15 +1,18 @@
 services:
   n8n-init:
+    profiles: [n8n]
     image: n8nio/n8n:1.65.0@sha256:b1b1c1597a17a71a6906ab1fda0c760747ade1c02c4e7154880f84f7338992ce
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - >-
-        n8n import:workflow --input=/fixtures/supplier-intake.json;
-        n8n import:workflow --input=/fixtures/order-update.json;
+        node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync(process.argv[1])); process.stdout.write(JSON.stringify(Array.isArray(x)?x:[x]))' /fixtures/supplier-intake.json >/tmp/supplier-intake.json;
+        node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync(process.argv[1])); process.stdout.write(JSON.stringify(Array.isArray(x)?x:[x]))' /fixtures/order-update.json >/tmp/order-update.json;
+        n8n import:workflow --input=/tmp/supplier-intake.json;
+        n8n import:workflow --input=/tmp/order-update.json;
         n8n update:workflow --all --active=true
     environment: &n8n-environment
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set N8N_ENCRYPTION_KEY}
-      N8N_HOST: supplier.intake.test
+      N8N_HOST: target.lab.test
       N8N_PORT: "5678"
       N8N_PROTOCOL: http
       N8N_SECURE_COOKIE: "false"
@@ -26,9 +29,12 @@ services:
     restart: "no"
 
   n8n:
+    profiles: [n8n]
     image: n8nio/n8n:1.65.0@sha256:b1b1c1597a17a71a6906ab1fda0c760747ade1c02c4e7154880f84f7338992ce
     restart: unless-stopped
-    networks: [application]
+    networks:
+      application:
+        aliases: [target]
     environment: *n8n-environment
     volumes: [n8n-data:/home/node/.n8n]
     depends_on:
@@ -40,6 +46,28 @@ services:
       retries: 60
       start_period: 20s
 
+  validator:
+    build:
+      context: ./validator
+    restart: unless-stopped
+    hostname: lab003-validator
+    networks:
+      application: {}
+      tracecat:
+        aliases: [lab003-validator]
+    environment:
+      LAB_003_TARGET_ID: ${LAB_003_TARGET_ID:?select a Lab 003 target with just up 003}
+      LAB_003_TARGET_URL: ${LAB_003_TARGET_URL:?select a Lab 003 target with just up 003}
+      LAB_003_READY_PATH: ${LAB_003_READY_PATH:-/}
+      LAB_003_WAF_URL: http://bunkerweb:8080
+      LAB_003_WAF_HOST: target.lab.test
+    healthcheck:
+      test: ["CMD", "/lab003-validator", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 5s
+
   bunkerweb:
     image: bunkerity/bunkerweb:1.6.14@sha256:2026544f5b8e10e3db52c018cb583193d273fc8ca9e25a5f5c21ef0b5f833586
     restart: unless-stopped
@@ -47,11 +75,11 @@ services:
     ports:
       - "127.0.0.1:${LAB_003_WAF_PORT:-38081}:8080"
     environment:
-      API_WHITELIST_IP: "127.0.0.0/8 172.16.0.0/12"
+      API_WHITELIST_IP: "127.0.0.0/8 172.16.0.0/12 192.168.0.0/16"
     depends_on:
-      n8n: {condition: service_healthy}
+      validator: {condition: service_healthy}
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null --header='Host: supplier.intake.test' http://127.0.0.1:8080/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null --header='Host: target.lab.test' http://127.0.0.1:8080/__lab003_upstream_ready || exit 1"]
       interval: 5s
       timeout: 3s
       retries: 40
@@ -81,8 +109,8 @@ services:
     environment:
       DATABASE_URI: mariadb+pymysql://bunkerweb:${BUNKERWEB_DB_PASSWORD:?set BUNKERWEB_DB_PASSWORD}@bw-db:3306/bunkerweb
       BUNKERWEB_INSTANCES: bunkerweb
-      API_WHITELIST_IP: "127.0.0.0/8 172.16.0.0/12"
-      SERVER_NAME: supplier.intake.test
+      API_WHITELIST_IP: "127.0.0.0/8 172.16.0.0/12 192.168.0.0/16"
+      SERVER_NAME: target.lab.test
       MULTISITE: "yes"
       SERVE_FILES: "no"
       DISABLE_DEFAULT_SERVER: "yes"
@@ -94,16 +122,16 @@ services:
       USE_DNSBL: "no"
       SEND_ANONYMOUS_REPORT: "no"
       CHECK_UPDATES: "no"
-      supplier.intake.test_USE_REVERSE_PROXY: "yes"
-      supplier.intake.test_REVERSE_PROXY_URL: /
-      supplier.intake.test_REVERSE_PROXY_HOST: http://n8n:5678
-      supplier.intake.test_USE_MODSECURITY: "yes"
-      supplier.intake.test_USE_MODSECURITY_CRS: "no"
-      supplier.intake.test_USE_BAD_BEHAVIOR: "no"
-      supplier.intake.test_USE_LIMIT_REQ: "no"
-      supplier.intake.test_ALLOWED_METHODS: GET|POST|HEAD|OPTIONS|PUT|PATCH|DELETE
-      supplier.intake.test_MODSECURITY_SEC_RULE_ENGINE: "On"
-      supplier.intake.test_SECURITY_MODE: block
+      USE_REVERSE_PROXY: "yes"
+      REVERSE_PROXY_URL: /
+      REVERSE_PROXY_HOST: http://validator:8081
+      USE_MODSECURITY: "yes"
+      USE_MODSECURITY_CRS: "no"
+      USE_BAD_BEHAVIOR: "no"
+      USE_LIMIT_REQ: "no"
+      ALLOWED_METHODS: GET|POST|HEAD|OPTIONS|PUT|PATCH|DELETE
+      MODSECURITY_SEC_RULE_ENGINE: "On"
+      SECURITY_MODE: block
     volumes: [waf-storage:/data]
     depends_on:
       bw-db: {condition: service_healthy}
@@ -117,7 +145,7 @@ services:
       DATABASE_URI: mariadb+pymysql://bunkerweb:${BUNKERWEB_DB_PASSWORD:?set BUNKERWEB_DB_PASSWORD}@bw-db:3306/bunkerweb
       API_USERNAME: lab-admin
       API_PASSWORD: ${BUNKERWEB_API_TOKEN:?set BUNKERWEB_API_TOKEN}
-      API_WHITELIST_IPS: "127.0.0.0/8 172.16.0.0/12"
+      API_WHITELIST_IPS: "127.0.0.0/8 172.16.0.0/12 192.168.0.0/16"
       API_LISTEN_ADDR: 0.0.0.0
       API_LISTEN_PORT: "8888"
       MAX_WORKERS: "1"
@@ -132,11 +160,12 @@ volumes:
 
 networks:
   application:
-    internal: true
+    external: true
+    name: lab-003_application
   management:
     internal: true
   waf-database:
     internal: true
   tracecat:
     external: true
-    name: tracecat_core
+    name: ${TRACECAT_DOCKER_NETWORK:-tracecat-labs_core}

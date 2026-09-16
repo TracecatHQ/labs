@@ -3,8 +3,10 @@
 Grade the frozen Case Work Product against the hidden Oracle and Rubric. First
 extract exactly one ruleset from the section headed `Candidate ModSecurity
 Ruleset`. If it is absent or ambiguous, mark the hard gate missed. Otherwise
-invoke the `validate_firewall_rule` workflow exactly once with that ruleset,
-`wait_strategy: wait`, and a 600-second timeout.
+read `target_id` from the Case payload, then invoke the
+`validate_firewall_rule` workflow exactly once with that ruleset and target,
+`wait_strategy: wait`, and a 600-second timeout. Never substitute or infer a
+different target.
 
 The helper owns the ephemeral candidate-rule slot, waits until the ruleset is
 active on the dataplane, replays hidden malicious and benign requests, and

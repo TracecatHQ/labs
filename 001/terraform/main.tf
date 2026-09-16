@@ -10,6 +10,8 @@ terraform {
 
 provider "tracecat" {}
 
+variable "workspace_id" { type = string }
+
 variable "mcp_credentials" {
   type      = map(map(string))
   sensitive = true
@@ -20,7 +22,7 @@ variable "candidate_model" {
   type = object({ provider = string, name = string })
   default = {
     provider = "openai"
-    name     = "gpt-5.2"
+    name     = "gpt-5.6-terra"
   }
 }
 
@@ -28,13 +30,14 @@ variable "judge_model" {
   type = object({ provider = string, name = string })
   default = {
     provider = "openai"
-    name     = "gpt-5.2"
+    name     = "gpt-5.6-sol"
   }
 }
 
 module "lab" {
   source          = "../../terraform/modules/lab"
   lab_id          = "001"
+  workspace_id    = var.workspace_id
   config_dir      = "${path.module}/../tracecat"
   mcp_credentials = var.mcp_credentials
   candidate_model = var.candidate_model
