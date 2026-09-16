@@ -74,7 +74,7 @@ just run 003
 just status 003 RUN_ID=<candidate-run-id>
 just judge 003 RUN_ID=<candidate-run-id>
 just status 003 RUN_ID=<judge-run-id>
-just export 003 RUN_ID=<candidate-run-id>
+just grade 003 RUN_ID=<candidate-run-id>
 ```
 
 Select another curated target before Candidate Run:
@@ -92,6 +92,15 @@ Use `just down 003` to stop the WAF, validator, and active vulnerable target.
 Lab 003 is ephemeral: stopping or switching targets also removes its Docker
 volumes so vulnerable application and candidate-rule state cannot leak between
 cases.
+
+`just grade` writes `scores.csv` and `summary.json` under
+`003/results/<candidate-run-id>/`.
+Summaries include Case tags (including CVEs where supplied) and the full
+Vulhub directory or built-in target ID, such as `bash/CVE-2014-6271` or `n8n`.
+`target_ids` lists all distinct targets; `target_id` is populated only when
+there is one distinct target.
+Metadata comes from frozen submitted Cases, so later fixture edits do not
+change historical reports.
 
 ## Agent access
 

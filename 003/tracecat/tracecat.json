@@ -5,7 +5,7 @@
       "name": "lab_003_waf",
       "description": "BunkerWeb management credentials used only by the Judge helper workflow.",
       "environment": "default",
-      "version": 2,
+      "version": 3,
       "keys_from_env": {
         "BUNKERWEB_API_TOKEN": "BUNKERWEB_API_TOKEN"
       }

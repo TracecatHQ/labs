@@ -51,7 +51,9 @@ lab-level `PROVENANCE.md`.
 
 1. Choose the next `NNN` directory and copy
    [`templates/lab-readme.md`](templates/lab-readme.md) to `NNN/README.md`.
-2. Add Case Templates and the Rubric under `NNN/evals/`.
+2. Add Case Templates and the Rubric under `NNN/evals/`. Populate relevant
+   `case.tags` and, for cases evaluating a specific target,
+   `case.payload.target_id` according to the Case Template contract.
 3. Add Candidate and Judge instructions under `NNN/tracecat/agent_presets/`.
 4. Add the minimal `tracecat.json` manifest. Omit empty optional sections.
 5. Add only the target services to `compose.yml`. Add a Judge helper workflow
@@ -72,6 +74,17 @@ lab must not require another CLI command or a lab-specific Just recipe.
 ```json
 {"schema_version":1,"case_id":"stable-case-id","case":{"title":"Candidate-visible title","description":"Candidate-visible question","priority":"medium","severity":"medium","tags":[],"fields":{},"dropdowns":{},"payload":{}},"oracle":{"criteria":{"criterion-id":{"expected":"hidden expected result"}}}}
 ```
+
+Use `case.tags` as an array of strings for candidate-visible technologies,
+behaviors, and CVEs where applicable. Use `case.payload.target_id` for a stable
+target identifier: the full Vulhub directory such as `bash/CVE-2014-6271`, or a
+built-in ID such as `n8n`. Do not infer CVEs from a product name or put hidden
+Oracle answers in tags. For cases without target identity, omit `target_id`;
+empty tags are valid. Labs 001 and 002 currently use empty tags and no target ID.
+
+The shared grader extracts this metadata automatically from frozen submitted
+Cases; no lab-specific grader code is needed. Updating fixtures affects future
+runs, not historical snapshots. See the Results contract for aggregation rules.
 
 Keep each lab to at most 200 Case Templates, Tracecat's maximum table page size.
 Split a larger suite into multiple labs instead of adding pagination machinery
@@ -115,9 +128,27 @@ Non-gate weights must total 100. Hard gates have weight 0 and force the Trial
 score to 0 when missed. The Judge returns every criterion exactly once as
 `met` or `missed`, with a reason and evidence references.
 
+A criterion may additionally declare classification reporting metadata:
+
+```json
+"metric": {
+  "type": "classification",
+  "labels": ["true_positive", "false_positive"]
+}
+```
+
+The Oracle's `expected` value must be one of those labels. The label
+`__abstain__` is reserved for missing predictions in reports. For classification
+criteria the Judge also returns a normalized `predicted_label`; missing or
+ambiguous predictions are null. Rubric weights continue to determine business
+scores, while support determines weighting in classification summaries.
+
 ## Tracecat manifest contract
 
-The shared module creates the workspace tables and the two standard workflows.
+The shared module creates the workspace tables, Candidate Run and Judge Run,
+and a shared single-agent subworkflow. The parent workflows iterate that
+subworkflow because the pinned Tracecat release does not loop
+`ai.preset_agent` actions directly.
 The lab manifest declares the two presets and only its optional integrations,
 secrets, and helper workflows:
 
@@ -174,11 +205,13 @@ exported canvas state with source YAML.
 
 ## Results contract
 
-The shared module writes `case_templates`, durable `evaluation_runs`, and
-`evaluation_scores`. The Candidate Run execution ID is the Evaluation Run ID;
+The shared module writes `case_templates`, durable `evaluation_runs`,
+`evaluation_scores`, and per-trial `evaluation_trial_details`. The Candidate
+Run execution ID is the Evaluation Run ID;
 Candidate Run persists its immutable Trial snapshot in `evaluation_runs`, and
-Judge Run reads that native Tracecat table. `just export NNN RUN_ID=...` writes
-this fixed CSV schema:
+Judge Run reads that native Tracecat table. `just grade NNN RUN_ID=...`
+validates execution completion, result coverage, score arithmetic, and hard
+gates before writing this fixed CSV schema:
 
 ```text
 schema_version,lab_id,evaluation_run_id,trial_id,case_id,trial_number,candidate_session_id,judge_run_execution_id,judge_session_id,rubric_id,rubric_version,criterion_id,criterion_weight,criterion_result,criterion_points,criterion_hard_gate,trial_hard_failed,trial_score,reason,evidence_refs,candidate_completed_at,judged_at
@@ -186,6 +219,25 @@ schema_version,lab_id,evaluation_run_id,trial_id,case_id,trial_number,candidate_
 
 Do not add lab-specific score columns. Put lab-specific detail in criterion IDs,
 reasons, and evidence references.
+
+The same directory receives `summary.json` with a sorted, deduplicated `tags`
+array from the frozen submitted Cases (including CVE tags where present),
+`target_ids` from their `payload.target_id` values, and `target_id` when there
+is exactly one distinct target. Target IDs preserve the full Vulhub directory
+(e.g. `bash/CVE-2014-6271`) or built-in ID (`n8n`). Missing target metadata
+produces `target_ids: []` and `target_id: null`; multiple distinct targets
+produce the full sorted, deduplicated array and `target_id: null`. The report
+also includes score distribution, criterion and hard-gate rates, workflow and agent timing, and classification metrics when
+available. Tags are informational Case metadata, not grading evidence, and
+are an empty array when unavailable. They are never read from current lab
+fixtures when grading historical runs. The classification report includes
+confusion matrices, accuracy,
+balanced accuracy, macro and support-weighted F1, MCC, per-class metrics, and
+joint exact match for multiple outputs. Undefined values are null. The
+standalone `just export` recipe remains available for raw criterion export but
+does not perform grading integrity checks. The grader uses only the Go standard
+library and owns its Terraform-output decoding, Tracecat HTTP access,
+validation, and report generation.
 
 ## README contract
 
@@ -214,10 +266,14 @@ just run NNN
 just status NNN RUN_ID=<candidate-run-id>
 just judge NNN RUN_ID=<candidate-run-id>
 just status NNN RUN_ID=<judge-run-id>
-just export NNN RUN_ID=<candidate-run-id>
+just grade NNN RUN_ID=<candidate-run-id>
 ```
 
 A lab is ready when Terraform can plan it, Candidate Run creates fresh Trial
 Cases and returns immutable Trials, Judge Run scores every Trial, the CSV
-exports with the shared schema, and `just check` passes. Repeated measurements
-are separate Candidate Runs, not repetitions inside one run.
+exports with the shared schema, and `just check` passes. Inspect the generated
+`summary.json`: verify that `tags` and `target_ids` match the submitted Cases,
+that full Vulhub IDs are preserved, and that `target_id` is populated only for
+one distinct target. Cases without metadata should produce empty arrays and
+`target_id: null`. This report inspection is part of validating every new lab.
+Repeated measurements are separate Candidate Runs, not repetitions inside one run.

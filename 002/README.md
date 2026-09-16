@@ -46,5 +46,12 @@ just run 002
 just status 002 RUN_ID=<candidate-run-id>
 just judge 002 RUN_ID=<candidate-run-id>
 just status 002 RUN_ID=<judge-run-id>
-just export 002 RUN_ID=<candidate-run-id>
+just grade 002 RUN_ID=<candidate-run-id>
 ```
+
+`just grade` writes `scores.csv` and `summary.json` under
+`002/results/<candidate-run-id>/`.
+The current Case Templates have empty tags and no target ID, so summaries
+contain `tags: []`, `target_ids: []`, and `target_id: null`.
+Metadata comes from frozen submitted Cases, so later fixture edits do not
+change historical reports.

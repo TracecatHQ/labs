@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "rubric_id": "lab-002-alert-classification",
-  "rubric_version": 1,
+  "rubric_version": 2,
   "criteria": [
     {
       "criterion_id": "evidence-scope",
@@ -15,6 +15,10 @@
       "label": "Alert determination",
       "weight": 50,
       "hard_gate": false,
+      "metric": {
+        "type": "classification",
+        "labels": ["true_positive", "false_positive"]
+      },
       "judge_instruction": "Met only when the Work Product clearly chooses the Oracle's true_positive or false_positive value and the cited Case evidence supports it."
     },
     {
@@ -22,6 +26,10 @@
       "label": "Incident relevance",
       "weight": 50,
       "hard_gate": false,
+      "metric": {
+        "type": "classification",
+        "labels": ["related", "unrelated"]
+      },
       "judge_instruction": "Met only when the Work Product independently chooses the Oracle's related or unrelated value and the cited Case evidence supports it."
     }
   ]

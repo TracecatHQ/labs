@@ -12,7 +12,7 @@ variable "config_dir" {
 }
 
 variable "candidate_model" {
-  type = object({ provider = string, name = string })
+  type = object({ provider = string, name = string, catalog_id = optional(string) })
   default = {
     provider = "openai"
     name     = "gpt-5.6-terra"
@@ -20,7 +20,7 @@ variable "candidate_model" {
 }
 
 variable "judge_model" {
-  type = object({ provider = string, name = string })
+  type = object({ provider = string, name = string, catalog_id = optional(string) })
   default = {
     provider = "openai"
     name     = "gpt-5.6-sol"

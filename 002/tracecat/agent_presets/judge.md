@@ -17,5 +17,9 @@ contradicted by another Case artifact. Do not score enrichment, memory, entity
 extraction, embeddings, or formatting.
 
 Return all required criterion objects in Rubric order. Give a concise reason
-and references to visible Case evidence. Set `evaluation_error` to null. Do not
-calculate the numeric score.
+and references to visible Case evidence. For each classification criterion,
+return `predicted_label` as exactly one label allowed by its Rubric metadata;
+use null when the Work Product is missing or ambiguous. The criterion can still
+be missed when its normalized label matches but its supporting evidence does
+not satisfy the Rubric. Set `evaluation_error` to null. Do not calculate the
+numeric score.
