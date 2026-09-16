@@ -65,22 +65,27 @@ definition:
         create_missing_tags: true
 
     - ref: run_candidates
-      action: ai.preset_agent
+      action: core.workflow.execute
       depends_on: [create_trial_cases]
       for_each: ${{ for var.item in FN.zip(ACTIONS.select_case_templates.result, ACTIONS.create_trial_cases.result) }}
       retry_policy:
         max_attempts: 1
         timeout: 3600
       args:
-        preset: candidate
-        user_prompt: >-
-          Investigate Tracecat Case ${{ var.item[1].id }}. The Case is the complete
-          unit of work. Put your visible analysis, evidence, timeline, decision,
-          and final answer in the Case description, tags, or comments. Do not
-          reveal hidden evaluation material. Your final return will also be
-          saved as a Case comment at the submission cutoff.
-        max_tool_calls: 24
-        max_requests: 64
+        workflow_alias: run_evaluation_agent
+        wait_strategy: wait
+        fail_strategy: all
+        loop_strategy: sequential
+        trigger_inputs:
+          preset: candidate
+          user_prompt: >-
+            Investigate Tracecat Case ${{ var.item[1].id }}. The Case is the complete
+            unit of work. Put your visible analysis, evidence, timeline, decision,
+            and final answer in the Case description, tags, or comments. Do not
+            reveal hidden evaluation material. Your final return will also be
+            saved as a Case comment at the submission cutoff.
+          max_tool_calls: 24
+          max_requests: 64
 
     - ref: save_candidate_returns
       action: core.cases.create_comment
@@ -103,15 +108,16 @@ definition:
               'tool_call_id': block.get('id'),
               'tool_name': block.get('name'),
               'input': block.get('input')
-            } if block.get('type') == 'tool_use' else {
+            } if 'tool_use_id' not in block else {
               'event': 'result',
               'tool_call_id': block.get('tool_use_id'),
               'success': not bool(block.get('is_error', False))
             }
             for block in (
-              (jsonpath('$.message.content[?(@.type == "tool_use")]', message) or [])
-              + (jsonpath('$.message.content[?(@.type == "tool_result")]', message) or [])
+              (jsonpath('$.message.content[?(@.name)]', message) or [])
+              + (jsonpath('$.message.content[?(@.tool_use_id)]', message) or [])
             )
+            if ('tool_use_id' in block or ('id' in block and 'input' in block))
           ]
 
     - ref: flatten_candidate_tool_calls
@@ -155,6 +161,7 @@ definition:
           trial_number: 1
           status: completed
           candidate_session_id: ${{ var.item[2].session_id }}
+          candidate_agent_latency_seconds: ${{ var.item[2].duration }}
           submission: ${{ var.item[3] }}
           tool_audit: ${{ var.item[4] }}
           candidate_completed_at: ${{ FN.utcnow(True) }}

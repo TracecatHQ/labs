@@ -20,6 +20,8 @@ locals {
   case_records = [for line in local.case_lines : jsondecode(line)]
   cases        = { for record in local.case_records : record.case_id => record }
 
+  classification_labels = distinct(flatten([for criterion in local.rubric.criteria : try(criterion.metric.labels, [])]))
+
   judge_output_type = {
     type                 = "object"
     additionalProperties = false
@@ -30,31 +32,40 @@ locals {
         type     = "array"
         minItems = length(local.rubric.criteria)
         maxItems = length(local.rubric.criteria)
-        prefixItems = [
-          for criterion in local.rubric.criteria : {
-            type                 = "object"
-            additionalProperties = false
-            required             = ["criterion_id", "result", "reason", "evidence_refs"]
-            properties = {
-              criterion_id = { type = "string", enum = [criterion.criterion_id] }
+        items = {
+          type                 = "object"
+          additionalProperties = false
+          required = concat(
+            ["criterion_id", "result", "reason", "evidence_refs"],
+            length(local.classification_labels) > 0 ? ["predicted_label"] : []
+          )
+          properties = merge(
+            {
+              criterion_id = { type = "string", enum = [for criterion in local.rubric.criteria : criterion.criterion_id] }
               result       = { type = "string", enum = ["met", "missed"] }
               reason       = { type = "string" }
               evidence_refs = {
                 type  = "array"
                 items = { type = "string" }
               }
-            }
-          }
-        ]
-        items = false
+            },
+            length(local.classification_labels) > 0 ? {
+              predicted_label = {
+                type = ["string", "null"]
+                enum = concat(local.classification_labels, [null])
+              }
+            } : {}
+          )
+        }
       }
     }
   }
 
   presets = { for preset in local.manifest.agent_presets : preset.slug => preset }
   standard_workflows = {
-    candidate_run = { alias = "candidate_run", file = "candidate-run.yml", path = "${path.module}/workflows/candidate-run.yml" }
-    judge_run     = { alias = "judge_run", file = "judge-run.yml", path = "${path.module}/workflows/judge-run.yml" }
+    run_evaluation_agent = { alias = "run_evaluation_agent", file = "run-evaluation-agent.yml", path = "${path.module}/workflows/run-evaluation-agent.yml" }
+    candidate_run        = { alias = "candidate_run", file = "candidate-run.yml", path = "${path.module}/workflows/candidate-run.yml" }
+    judge_run            = { alias = "judge_run", file = "judge-run.yml", path = "${path.module}/workflows/judge-run.yml" }
   }
   lab_workflows = {
     for workflow in try(local.manifest.workflows, []) : workflow.alias => merge(workflow, { path = "${var.config_dir}/${workflow.file}" })
@@ -104,6 +115,18 @@ locals {
       { name = "candidate_completed_at", type = "TIMESTAMPTZ", nullable = false },
       { name = "judged_at", type = "TIMESTAMPTZ", nullable = false }
     ]
+    evaluation_trial_details = [
+      { name = "judge_run_execution_id", type = "TEXT", nullable = false },
+      { name = "detail_key", type = "TEXT", nullable = false, is_index = true },
+      { name = "schema_version", type = "INTEGER", nullable = false },
+      { name = "lab_id", type = "TEXT", nullable = false },
+      { name = "evaluation_run_id", type = "TEXT", nullable = false },
+      { name = "trial_id", type = "TEXT", nullable = false },
+      { name = "candidate_agent_latency_seconds", type = "NUMERIC", nullable = true },
+      { name = "judge_agent_latency_seconds", type = "NUMERIC", nullable = false },
+      { name = "classification_expected_labels", type = "JSONB", nullable = false },
+      { name = "classification_predicted_labels", type = "JSONB", nullable = false }
+    ]
   }
 }
 
@@ -147,7 +170,7 @@ resource "tracecat_agent_preset" "preset" {
         instructions     = file("${var.config_dir}/${each.value.instructions_file}")
         model_provider   = each.key == "candidate" ? var.candidate_model.provider : var.judge_model.provider
         model_name       = each.key == "candidate" ? var.candidate_model.name : var.judge_model.name
-        catalog_id       = null
+        catalog_id       = each.key == "candidate" ? var.candidate_model.catalog_id : var.judge_model.catalog_id
         mcp_integrations = [for slug in try(each.value.mcp_catalog_slugs, []) : tracecat_mcp_integration.integration[slug].id]
         output_type      = each.key == "judge" ? local.judge_output_type : null
       }

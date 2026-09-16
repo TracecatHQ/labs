@@ -132,8 +132,8 @@ _terraform lab command:
         .[$secret.name] = reduce ($secret.keys_from_env | to_entries[]) as $key ({};
           .[$key.key] = (env[$key.value] // error("set " + $key.value))))
     ' "$manifest")"
-    candidate_model="$(jq -cn --arg provider "$CANDIDATE_MODEL_PROVIDER" --arg name "$CANDIDATE_MODEL_NAME" '{provider:$provider,name:$name}')"
-    judge_model="$(jq -cn --arg provider "$JUDGE_MODEL_PROVIDER" --arg name "$JUDGE_MODEL_NAME" '{provider:$provider,name:$name}')"
+    candidate_model="$(bash "{{ root }}/scripts/resolve-model.sh" "$CANDIDATE_MODEL_PROVIDER" "$CANDIDATE_MODEL_NAME")"
+    judge_model="$(bash "{{ root }}/scripts/resolve-model.sh" "$JUDGE_MODEL_PROVIDER" "$JUDGE_MODEL_NAME")"
     export TF_VAR_mcp_credentials="$mcp_credentials"
     export TF_VAR_secret_values="$secret_values"
     export TF_VAR_candidate_model="$candidate_model"
@@ -220,6 +220,15 @@ judge lab RUN_ID:
     response="$(curl -fsS -H "Authorization: Bearer $TRACECAT_API_KEY" -H 'Content-Type: application/json' -d "$payload" "$TRACECAT_API_URL/workspaces/$workspace_id/workflow-executions")"
     echo "$response" | jq --arg run_id "$run_id" '{evaluation_run_id:$run_id,judge_run_execution_id:.wf_exec_id}'
 
+# Validate a completed Evaluation Run, export scores.csv, and write summary.json.
+grade lab RUN_ID:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    run_id="{{ RUN_ID }}"
+    run_id="${run_id#RUN_ID=}"
+    cd "{{ root }}"
+    GOCACHE="{{ root }}/.cache/go-build" go run ./cmd/labs-grade --root "{{ root }}" --lab "{{ lab }}" --run-id "$run_id"
+
 status lab RUN_ID:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -274,7 +283,8 @@ check:
     ! grep -q '^TRACECAT__FEATURE_FLAGS=' "{{ root }}/.env.example"
     grep -Fxq 'TRACECAT__EE_MULTI_TENANT=true' "{{ root }}/.env.example"
     grep -Fxq 'TRACECAT__AUTH_SUPERADMIN_EMAIL=admin@tracecat.com' "{{ root }}/.env.example"
-    bash -n "{{ root }}/scripts/setup.sh"
+    bash -n "{{ root }}/scripts/setup.sh" "{{ root }}/scripts/resolve-model.sh"
+    bash "{{ root }}/test/resolve-model.sh"
     found=0
     for lab_dir in "{{ root }}"/[0-9][0-9][0-9]; do
       [[ -d "$lab_dir/terraform" ]] || continue
@@ -294,7 +304,26 @@ check:
         (map(.case_id) | length == (unique | length)) and
         (all(.[]; .schema_version == 1 and (.case_id | type) == "string" and (.case | type) == "object" and (.oracle.criteria | type) == "object")) and
         (all(.[]; (.oracle.criteria | keys | sort) == ($rubric[0].criteria | map(.criterion_id) | sort))) and
-        (all($rubric[0].criteria[]; (.criterion_id | type) == "string" and (.weight | type) == "number" and .weight >= 0 and (.hard_gate | type) == "boolean")) and
+        (all($rubric[0].criteria[];
+          (.criterion_id | type) == "string" and
+          (.weight | type) == "number" and .weight >= 0 and
+          (.hard_gate | type) == "boolean" and
+          ((has("metric") | not) or (
+            (.metric | type) == "object" and
+            (.metric | keys | sort) == ["labels", "type"] and
+            .metric.type == "classification" and
+            (.metric.labels | type) == "array" and
+            (.metric.labels | length) >= 2 and
+            (.metric.labels | length) == (.metric.labels | unique | length) and
+            all(.metric.labels[]; type == "string" and length > 0 and . != "__abstain__")
+          ))
+        )) and
+        (all(.[]; . as $case | all($rubric[0].criteria[];
+          . as $criterion |
+          if $criterion.metric?.type == "classification" then
+            ($criterion.metric.labels | index($case.oracle.criteria[$criterion.criterion_id].expected)) != null
+          else true end
+        ))) and
         (($rubric[0].criteria | map(select(.hard_gate == false) | .weight) | add) == 100) and
         (all($rubric[0].criteria[]; if .hard_gate then .weight == 0 else true end))
       ' "{{ root }}/$lab/evals/cases.ndjson" >/dev/null
@@ -303,7 +332,12 @@ check:
       done
     done
     test "$found" = 1
-    ruby -e 'require "yaml"; ARGV.flat_map { |pattern| Dir[pattern] }.each { |path| YAML.load_file(path) }' "{{ root }}/terraform/modules/lab/workflows/*.yml" "{{ root }}/[0-9][0-9][0-9]/tracecat/workflows/*.yml"
+    for workflow in "{{ root }}"/terraform/modules/lab/workflows/*.yml "{{ root }}"/[0-9][0-9][0-9]/tracecat/workflows/*.yml; do
+      [[ -f "$workflow" ]] || continue
+      terraform -chdir="{{ root }}" console <<<"yamldecode(file(\"$workflow\"))" >/dev/null
+    done
     terraform fmt -check -recursive "{{ root }}"
+    cd "{{ root }}"
+    GOCACHE="{{ root }}/.cache/go-build" go test ./...
     cd "{{ root }}/terraform-provider-tracecat"
     GOCACHE="{{ root }}/.cache/go-build" go test ./...

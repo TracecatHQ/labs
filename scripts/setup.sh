@@ -296,7 +296,7 @@ set_env TRACECAT_WORKSPACE_ID "$workspace_id"
 unset configured_workspace_id legacy_workspace_count legacy_workspace_id legacy_workspaces workspace_count workspace_id
 
 required_scopes='[
-  "org:read", "org:workspace:read",
+  "org:read", "org:workspace:read", "org:secret:read",
   "workspace:read",
   "workflow:read", "workflow:create", "workflow:update", "workflow:delete", "workflow:execute",
   "integration:read", "integration:create", "integration:update", "integration:delete",

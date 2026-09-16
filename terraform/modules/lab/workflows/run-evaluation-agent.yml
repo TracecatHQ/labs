@@ -1,0 +1,29 @@
+version: 1
+definition:
+  title: Run Evaluation Agent
+  description: Run one evaluation agent; parent workflows iterate this subflow.
+  entrypoint:
+    ref: run_agent
+    expects:
+      preset:
+        type: str
+      user_prompt:
+        type: str
+      max_tool_calls:
+        type: int
+      max_requests:
+        type: int
+  config:
+    timeout: 3600
+  actions:
+    - ref: run_agent
+      action: ai.preset_agent
+      retry_policy:
+        max_attempts: 1
+        timeout: 3600
+      args:
+        preset: ${{ TRIGGER.preset }}
+        user_prompt: ${{ TRIGGER.user_prompt }}
+        max_tool_calls: ${{ TRIGGER.max_tool_calls }}
+        max_requests: ${{ TRIGGER.max_requests }}
+  returns: ${{ ACTIONS.run_agent.result }}
