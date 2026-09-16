@@ -1,0 +1,167 @@
+internal/grading/report.go
+  s_fa685776ab3671::t_1fc5e409226f85 700-703
+  s_0685bc37cf9e70::t_bfecab73c853ab 30,434
+  s_fa685776ab3671::t_10405f48af36f6 317
+  s_0685bc37cf9e70::t_7397c3a5a9561c 128,132,136,204,214,259,264,266,269,321,358,445,622-624
+  s_0685bc37cf9e70::t_74b0d8fe86e2ef 1-29,31-78,82-90,97-127,129-131,133-135,137-143,145-203,205-213,215-258,260-263,265,267-268,270-274,277,282-316,318-319,322-323,325-333,336-357,359-399,420,424-433,435-441,446,454-476,478-621,625-659,663-677,679-699,704-805
+  s_fa685776ab3671::t_68cbb4990d73f7 401-419,421-422
+  s_fa685776ab3671::t_60a68c68cc73f6 144,320,324,442-444,447-453,660-662
+  s_fa685776ab3671::t_3bd7ce8e2b0e4b 275-276,278-281
+  s_0685bc37cf9e70::t_385dfe5a1c3d88 79-81,91-96,477,678
+  s_0685bc37cf9e70::t_06aa25e84cdbda 334-335
+  s_fa685776ab3671::t_fc218484162002 400,423
+internal/grading/client.go
+  s_0685bc37cf9e70::t_31486ecaa84f28 22-29
+  s_fa685776ab3671::t_60a68c68cc73f6 56,192-197
+  s_0685bc37cf9e70::t_385dfe5a1c3d88 117-119,127-137
+  s_0685bc37cf9e70::t_3f514edd834ff0 1-3,5-21,30-36,40,42-55,57-116,120-126,138-176,184-191,198-241
+  s_fa685776ab3671::t_1fc5e409226f85 177-183
+  s_0685bc37cf9e70::t_2eaf2312b22083 4,37-39,41
+002/terraform/main.tf
+  s_fa685776ab3671::t_fb1b919c2bc962 16,24
+terraform/modules/lab/workflows/judge-run.yml
+  s_0685bc37cf9e70::t_035b976d44658b 199,220-226,228-236
+  s_fa685776ab3671::t_abb83af4acbca0 63-72,79-102,106,108-111
+  s_fa685776ab3671::t_60a68c68cc73f6 207
+  s_0685bc37cf9e70::t_874635eaaec563 200-206,208-219,237,246-251
+  s_fa685776ab3671::t_10405f48af36f6 227
+  s_fa685776ab3671::t_64c919d2b73fe2 45,52-62,252-253
+internal/grading/types.go
+  s_0685bc37cf9e70::t_385dfe5a1c3d88 4,243-257
+  s_fa685776ab3671::t_68cbb4990d73f7 86-89,261-262
+  s_0685bc37cf9e70::t_d08fa3d9dfdc7d 1-2,9-24,26-27,51-58,60-71,73-78,82,91,93,104-120,143-145,147-151,154-192,199-214,217-220,222-231,240-242,258-260,273-283
+  s_0685bc37cf9e70::t_1d0bc66cb069c7 95-103
+  s_fa685776ab3671::t_10405f48af36f6 146
+  s_fa685776ab3671::t_60a68c68cc73f6 152,215-216
+  s_0685bc37cf9e70::t_06aa25e84cdbda 72
+  s_0685bc37cf9e70::t_bfecab73c853ab 121-132,134,136-137,139-142,193-198,221,232-239,264-272
+  s_0685bc37cf9e70::t_3f514edd834ff0 3,5,7-8,25
+  s_0685bc37cf9e70::t_fcf34452fddc4c 6,28-50,59,133,135,138,153
+  s_fa685776ab3671::t_250f9a42a77140 79-81,83-85,90,92,94,263
+002/evals/rubric.json
+  s_0685bc37cf9e70::t_874635eaaec563 4,18-21,29-32
+internal/grading/client_test.go
+  s_0685bc37cf9e70::t_09babde2ab8ed3 8-10,14-35
+  s_fa685776ab3671::t_1fc5e409226f85 11,125,137,140,142-147,149-151,153-155,158-177
+  s_0685bc37cf9e70::t_31486ecaa84f28 78-89
+  s_0685bc37cf9e70::t_c51a4d2b3fae5c 1-7,12-13,36-77,90-109,139
+  s_0685bc37cf9e70::t_4907af1bb13a3b 110-121
+  s_fa685776ab3671::t_bf313544ea55b3 122-124,126-136,138,141,148,152,156-157
+Justfile
+  s_fa685776ab3671::t_236cf9bf8db9ae 287
+  s_fa685776ab3671::t_fb1b919c2bc962 135-136,286
+  s_0685bc37cf9e70::t_6a8695e2d584fa 229-230,335-338,340-341
+  s_0685bc37cf9e70::t_09dd5bc5b70a1d 223-228,231,307-317,319-320,323-326
+  s_fa685776ab3671::t_60a68c68cc73f6 318
+  s_0685bc37cf9e70::t_61b4f36e5ef943 321-322
+terraform/modules/lab/variables.tf
+  s_fa685776ab3671::t_fb1b919c2bc962 15,23
+test/resolve-model.sh
+  s_fa685776ab3671::t_236cf9bf8db9ae 1-28
+002/README.md
+  s_fa685776ab3671::t_dc075d0676a594 53-54
+  s_0685bc37cf9e70::t_05889c0bbec720 49
+  s_fa685776ab3671::t_399961233b6af9 51-52,55-57
+002/tracecat/agent_presets/judge.md
+  s_0685bc37cf9e70::t_874635eaaec563 20-25
+go.mod
+  s_0685bc37cf9e70::t_d08fa3d9dfdc7d 1-3
+001/terraform/main.tf
+  s_fa685776ab3671::t_fb1b919c2bc962 22,30
+003/tracecat/agent_presets/judge.md
+  s_fa685776ab3671::t_856402a593181f 7-15
+templates/lab-readme.md
+  s_0685bc37cf9e70::t_05889c0bbec720 42
+  s_fa685776ab3671::t_399961233b6af9 19-21,44-49
+scripts/resolve-model.sh
+  s_fa685776ab3671::t_fb1b919c2bc962 1-22
+terraform/modules/lab/main.tf
+  s_fa685776ab3671::t_10405f48af36f6 119
+  s_fa685776ab3671::t_60a68c68cc73f6 125
+  s_fa685776ab3671::t_fb1b919c2bc962 173
+  s_fa685776ab3671::t_abb83af4acbca0 23-24,35-44,51-59
+  s_0685bc37cf9e70::t_874635eaaec563 118,120-124,126-128
+  s_fa685776ab3671::t_3708faa6f643aa 66-68,129
+CONTRIBUTING.md
+  s_fa685776ab3671::t_348aabb9c2cb84 148-151
+  s_0685bc37cf9e70::t_28924ab48797a2 238-240
+  s_fa685776ab3671::t_dc075d0676a594 278-279
+  s_fa685776ab3671::t_68cbb4990d73f7 225-229
+  s_0685bc37cf9e70::t_05889c0bbec720 131-139,142-145,208-210,212-214,234-237,269
+  s_fa685776ab3671::t_399961233b6af9 54-56,78-88,230,274-277
+  s_fa685776ab3671::t_015592602c5044 140-141,223-224,231-233,241
+003/README.md
+  s_fa685776ab3671::t_dc075d0676a594 96-104
+  s_0685bc37cf9e70::t_05889c0bbec720 77
+README.md
+  s_fa685776ab3671::t_348aabb9c2cb84 33-35
+  s_0685bc37cf9e70::t_05889c0bbec720 3-6,14,55,81-86,90-96
+  s_0685bc37cf9e70::t_1ffbd6b9067670 8-9
+  s_fa685776ab3671::t_236cf9bf8db9ae 58-61
+  s_0685bc37cf9e70::t_28924ab48797a2 29-30,99-100
+  s_fa685776ab3671::t_399961233b6af9 102-108
+  s_fa685776ab3671::t_2cd95cbc8fec51 62,97-98,101
+cmd/labs-grade/main.go
+  s_0685bc37cf9e70::t_31486ecaa84f28 28-30
+  s_0685bc37cf9e70::t_3f514edd834ff0 1-27,31-67
+001/README.md
+  s_fa685776ab3671::t_dc075d0676a594 57-58
+  s_0685bc37cf9e70::t_05889c0bbec720 53
+  s_fa685776ab3671::t_399961233b6af9 55-56,59-61
+internal/grading/report_test.go
+  s_0685bc37cf9e70::t_bfecab73c853ab 18-19,21,267,277
+  s_0685bc37cf9e70::t_7397c3a5a9561c 220,240
+  s_fa685776ab3671::t_7b551f66100191 309-314
+  s_0685bc37cf9e70::t_c51a4d2b3fae5c 1-17,20,22-91,109-145,152-219,221-239,241-263,268-276,278,308,346
+  s_fa685776ab3671::t_10405f48af36f6 264-265,302-307
+  s_0685bc37cf9e70::t_31486ecaa84f28 92-108,146-151,347
+  s_fa685776ab3671::t_3bd7ce8e2b0e4b 315-326,334,338,349
+  s_fa685776ab3671::t_60a68c68cc73f6 266,279-301,332-333,337,348
+  s_fa685776ab3671::t_68cbb4990d73f7 335,339,342-343,350,353-394
+  s_fa685776ab3671::t_953dc7b893f25c 327-331,336,340-341,344-345,351-352
+003/terraform/main.tf
+  s_fa685776ab3671::t_fb1b919c2bc962 22,30
+terraform/modules/lab/workflows/candidate-run.yml
+  s_fa685776ab3671::t_348aabb9c2cb84 111,118
+  s_fa685776ab3671::t_24308e1d6e9822 117,120
+  s_0685bc37cf9e70::t_874635eaaec563 164
+  s_fa685776ab3671::t_95fc731e676c9e 68,75-88
+003/tracecat/tracecat.json
+  s_fa685776ab3671::t_fc63199f516418 8
+scripts/setup.sh
+  s_fa685776ab3671::t_02fbca91414623 299
+terraform/modules/lab/workflows/run-evaluation-agent.yml
+  s_791eddda3278eb::t_e0d753171d914c 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "24506d7460e6b479e95531188e1ad6af129e54d3",
+  "prompts": {},
+  "sessions": {
+    "s_0685bc37cf9e70": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0aa8a-4700-7432-a3ba-33716eea9b8a",
+        "model": "gpt-daybreak-blue-latest"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    },
+    "s_791eddda3278eb": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0aa4d-c5bf-7c40-a2f4-6dd76008b836",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    },
+    "s_fa685776ab3671": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0aab5-45c6-7371-9771-1e1a0932369d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    }
+  }
+}
