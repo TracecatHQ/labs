@@ -13,7 +13,7 @@ chmod 600 "$cookie_jar" "$response_file"
 
 cleanup() {
   unset tracecat_password provider_secret encoded_password api_key
-  rm -f "$cookie_jar" "$response_file"
+  rm -f "$cookie_jar" "$response_file" "$tmp_dir/legacy-workspaces"
   rmdir "$tmp_dir" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
@@ -27,7 +27,7 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
 }
 
-for command_name in curl docker git jq just openssl; do
+for command_name in curl docker git jq just openssl terraform; do
   require_command "$command_name"
 done
 
@@ -61,6 +61,39 @@ set_env() {
   mv "$destination" "$env_file"
   chmod 600 "$env_file"
 }
+
+# Preserve the Compose identity of existing checkouts. Fresh checkouts use the
+# names in .env.example; legacy checkouts gain the matching network explicitly.
+compose_project="$(env_value COMPOSE_PROJECT_NAME)"
+if [[ -z "$compose_project" || "$compose_project" == replace-with-* ]]; then
+  compose_project=tracecat-labs
+  set_env COMPOSE_PROJECT_NAME "$compose_project"
+fi
+tracecat_network="$(env_value TRACECAT_DOCKER_NETWORK)"
+if [[ -z "$tracecat_network" || "$tracecat_network" == replace-with-* ]]; then
+  set_env TRACECAT_DOCKER_NETWORK "${compose_project}_core"
+fi
+unset compose_project tracecat_network
+
+# Record old per-lab workspace resources before selecting a workspace. The
+# explicit `just migrate-workspace` command later removes only that resource
+# from local state after verifying that its ID matches the selected workspace.
+legacy_workspace_file="$tmp_dir/legacy-workspaces"
+: > "$legacy_workspace_file"
+for terraform_dir in "$root"/[0-9][0-9][0-9]/terraform; do
+  [[ -d "$terraform_dir" ]] || continue
+  state_json="$(terraform -chdir="$terraform_dir" state pull 2>/dev/null || true)"
+  [[ -n "$state_json" ]] || continue
+  legacy_workspace_id="$(jq -r '
+    .resources[]?
+    | select(.module == "module.lab" and .type == "tracecat_workspace" and .name == "lab")
+    | .instances[0].attributes.id // empty
+  ' <<<"$state_json")"
+  if [[ -n "$legacy_workspace_id" ]]; then
+    printf '%s\t%s\n' "$(basename "$(dirname "$terraform_dir")")" "$legacy_workspace_id" >> "$legacy_workspace_file"
+  fi
+done
+unset state_json legacy_workspace_id terraform_dir
 
 random_hex() {
   openssl rand -hex "$1"
@@ -217,7 +250,19 @@ fi
 # deployment-owned workspace so the labs do not need multi_workspace access.
 api_get /workspaces
 configured_workspace_id="$(env_value TRACECAT_WORKSPACE_ID)"
-if [[ -n "$configured_workspace_id" ]]; then
+legacy_workspace_count="$(cut -f2 "$legacy_workspace_file" | sort -u | awk 'NF {count++} END {print count+0}')"
+if [[ "$legacy_workspace_count" -gt 1 ]]; then
+  legacy_workspaces="$(awk -F '\t' '{print $1 "=" $2}' "$legacy_workspace_file" | paste -sd ', ' -)"
+  die "multiple legacy lab workspaces found ($legacy_workspaces); migrate one lab deployment at a time"
+fi
+legacy_workspace_id="$(cut -f2 "$legacy_workspace_file" | head -n 1)"
+if [[ -n "$configured_workspace_id" && -n "$legacy_workspace_id" && "$configured_workspace_id" != "$legacy_workspace_id" ]]; then
+  die "TRACECAT_WORKSPACE_ID does not match the retained legacy lab workspace $legacy_workspace_id"
+fi
+if [[ -n "$legacy_workspace_id" ]]; then
+  workspace_id="$(jq -r --arg id "$legacy_workspace_id" 'map(select(.id == $id))[0].id // empty' "$response_file")"
+  [[ -n "$workspace_id" ]] || die "legacy lab workspace $legacy_workspace_id is not available in Tracecat"
+elif [[ -n "$configured_workspace_id" ]]; then
   workspace_id="$(jq -r --arg id "$configured_workspace_id" 'map(select(.id == $id))[0].id // empty' "$response_file")"
 else
   workspace_id=""
@@ -229,7 +274,7 @@ if [[ -z "$workspace_id" ]]; then
   workspace_id="$(jq -er '.[0].id' "$response_file")"
 fi
 set_env TRACECAT_WORKSPACE_ID "$workspace_id"
-unset configured_workspace_id workspace_count workspace_id
+unset configured_workspace_id legacy_workspace_count legacy_workspace_id legacy_workspaces workspace_count workspace_id
 
 required_scopes='[
   "org:read", "org:workspace:read",
@@ -339,3 +384,8 @@ set_env JUDGE_MODEL_NAME "$judge_model"
 
 unset tracecat_password
 printf '\nSetup complete. Terraform API access is in %s (mode 0600); the model credential exists only in Tracecat.\n' "$env_file"
+if [[ -s "$legacy_workspace_file" ]]; then
+  while IFS=$'\t' read -r legacy_lab _; do
+    printf 'Preserve the existing lab resources before planning: just migrate-workspace %s\n' "$legacy_lab"
+  done < "$legacy_workspace_file"
+fi

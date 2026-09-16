@@ -53,6 +53,23 @@ just status 001 RUN_ID=<judge-run-id>
 just export 001 RUN_ID=<candidate-run-id>
 ```
 
+### Upgrading an existing checkout
+
+`just setup` preserves an existing Compose project name and adds its matching
+Tracecat network to `.env`. If the previous Terraform state owns a per-lab
+workspace, setup selects that same workspace and tells you to run:
+
+```bash
+just migrate-workspace 001
+just plan 001
+```
+
+Migration first verifies the selected workspace ID, writes a mode-`0600` state
+backup under `.cache/terraform-migrations/`, and forgets only Terraform's
+ownership of the workspace container. The tables, workflows, presets, retained
+runs, and scores remain in place. `just plan` and `just apply` refuse to proceed
+while unmigrated legacy workspace state is present.
+
 Use one applied lab workspace per Tracecat deployment. Tracecat 1.0.0-rc.1
 requires the `multi_workspace` entitlement to create another workspace, and the
 labs intentionally do not enable it.

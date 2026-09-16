@@ -111,6 +111,17 @@ _terraform lab command:
     #!/usr/bin/env bash
     set -euo pipefail
     manifest="{{ root }}/{{ lab }}/tracecat/tracecat.json"
+    state_json="$(terraform -chdir="{{ root }}/{{ lab }}/terraform" state pull 2>/dev/null || true)"
+    legacy_workspace_id="$(jq -r '
+      .resources[]?
+      | select(.module == "module.lab" and .type == "tracecat_workspace" and .name == "lab")
+      | .instances[0].attributes.id // empty
+    ' <<<"$state_json")"
+    if [[ -n "$legacy_workspace_id" ]]; then
+      echo "Refusing to {{ command }}: legacy workspace state could replace retained lab resources." >&2
+      echo "Run: just migrate-workspace {{ lab }}" >&2
+      exit 2
+    fi
     mcp_credentials="$(jq -c '
       reduce (.mcp_integrations[]? | select(.credentials_from_env)) as $integration ({};
         .[$integration.catalog_slug] = reduce ($integration.credentials_from_env | to_entries[]) as $credential ({};
@@ -135,6 +146,41 @@ plan lab:
 
 apply lab:
     @just _terraform "{{ lab }}" apply
+
+# Preserve a pre-1.0 lab workspace while adopting it as the deployment workspace.
+migrate-workspace lab:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    terraform_dir="{{ root }}/{{ lab }}/terraform"
+    test -d "$terraform_dir" || { echo "Unknown lab: {{ lab }}" >&2; exit 2; }
+    state_json="$(terraform -chdir="$terraform_dir" state pull 2>/dev/null || true)"
+    legacy_workspace_id="$(jq -r '
+      .resources[]?
+      | select(.module == "module.lab" and .type == "tracecat_workspace" and .name == "lab")
+      | .instances[0].attributes.id // empty
+    ' <<<"$state_json")"
+    if [[ -z "$legacy_workspace_id" ]]; then
+      echo "No legacy workspace state exists for Lab {{ lab }}."
+      exit 0
+    fi
+    configured_workspace_id="${TRACECAT_WORKSPACE_ID:?run just setup first}"
+    if [[ "$configured_workspace_id" != "$legacy_workspace_id" ]]; then
+      echo "Refusing migration: TRACECAT_WORKSPACE_ID ($configured_workspace_id) does not match the retained workspace ($legacy_workspace_id)." >&2
+      exit 2
+    fi
+    backup_dir="{{ root }}/.cache/terraform-migrations/{{ lab }}"
+    mkdir -p "$backup_dir"
+    backup="$backup_dir/terraform.tfstate.$(date -u +%Y%m%dT%H%M%SZ)"
+    printf '%s\n' "$state_json" > "$backup"
+    chmod 600 "$backup"
+    terraform -chdir="$terraform_dir" state rm module.lab.tracecat_workspace.lab
+    remaining="$(terraform -chdir="$terraform_dir" state pull)"
+    if jq -e '.resources[]? | select(.module == "module.lab" and .type == "tracecat_workspace" and .name == "lab")' <<<"$remaining" >/dev/null; then
+      echo "Legacy workspace state is still present; inspect $backup." >&2
+      exit 1
+    fi
+    echo "Preserved workspace $legacy_workspace_id and removed only its ownership record from Lab {{ lab }} state."
+    echo "State backup: $backup"
 
 # Trigger Candidate Run asynchronously. Optional: CASE_IDS=a,b.
 run lab CASE_IDS="":
