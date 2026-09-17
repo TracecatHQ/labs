@@ -1,0 +1,33 @@
+services:
+  sigma-runner:
+    build:
+      context: target
+      dockerfile: sigma_runner/Dockerfile
+    restart: unless-stopped
+    networks:
+      tracecat:
+        aliases: [lab006-sigma]
+    volumes:
+      - ./runtime/kusto_data:/data:ro
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/sigma-runner", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  references:
+    image: nginx:1.27.4-alpine@sha256:4ff102c5d78d254a6f0da062b3cf39eaf07f01eec0927fd21e219d0af8bc0591
+    restart: unless-stopped
+    depends_on:
+      sigma-runner: {condition: service_healthy}
+    networks:
+      tracecat:
+        aliases: [lab006-references]
+    volumes:
+      - ./runtime/references:/usr/share/nginx/html:ro
+
+networks:
+  tracecat:
+    external: true
+    name: ${TRACECAT_DOCKER_NETWORK:-tracecat-labs_core}

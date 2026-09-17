@@ -1,0 +1,205 @@
+version: 1
+definition:
+  title: Judge Run
+  description: Batch durable per-Trial scoring checkpoints using profile-selected scorers.
+  entrypoint:
+    ref: load_scoring_work
+    expects:
+      evaluation_run_id:
+        type: str
+        description: Completed Evaluation Run ID containing durable Trial checkpoints.
+      scoring_run_execution_id:
+        type: str
+        description: Public Judge wrapper execution ID used for score provenance.
+      batch_size:
+        type: int
+        default: 4
+        description: Maximum Scoring Trial child workflows in flight.
+  config:
+    timeout: 0
+  actions:
+    - ref: load_scoring_work
+      action: core.script.run_python
+      args:
+        timeout_seconds: 300
+        inputs:
+          evaluation_run_id: ${{ TRIGGER.evaluation_run_id }}
+          batch_size: ${{ TRIGGER.batch_size }}
+          scoring_run_execution_id: ${{ TRIGGER.scoring_run_execution_id }}
+        script: |
+          from tracecat_registry import ctx
+
+
+          def all_rows(table):
+              rows, cursor = [], None
+              while True:
+                  page = ctx.tables.search_rows(table=table, limit=200, cursor=cursor)
+                  if isinstance(page, list):
+                      rows.extend(page)
+                      break
+                  rows.extend(page.get("items", []))
+                  cursor = page.get("next_cursor")
+                  if not page.get("has_more"):
+                      break
+                  if not cursor:
+                      raise ValueError(f"{table} returned has_more without next_cursor")
+              return rows
+
+
+          def complete_trials(evaluation_run_id, profile, trials):
+              criterion_ids = {item["criterion_id"] for item in profile["criteria"]}
+              metric_ids = {item["metric_id"] for item in profile["metrics"]}
+              scored, score_provenance = {}, {}
+              for row in all_rows("evaluation_scores"):
+                  if row.get("evaluation_run_id") == evaluation_run_id:
+                      scored.setdefault(row.get("trial_id"), set()).add(row.get("criterion_id"))
+                      score_provenance.setdefault(row.get("trial_id"), set()).add((row.get("scoring_run_execution_id"), row.get("scoring_attempt_id")))
+              metered, metric_provenance = {}, {}
+              for row in all_rows("evaluation_metrics"):
+                  if row.get("evaluation_run_id") == evaluation_run_id:
+                      metered.setdefault(row.get("trial_id"), set()).add(row.get("metric_id"))
+                      metric_provenance.setdefault(row.get("trial_id"), set()).add((row.get("scoring_run_execution_id"), row.get("scoring_attempt_id")))
+              attempts = {
+                  row.get("trial_id"): row for row in all_rows("scoring_attempts")
+                  if row.get("evaluation_run_id") == evaluation_run_id and row.get("status") == "completed"
+              }
+              complete = set()
+              for trial in trials:
+                  trial_id = trial["trial_id"]
+                  attempt = attempts.get(trial_id)
+                  provenance = {(attempt.get("scoring_run_execution_id"), attempt.get("scoring_attempt_id"))} if attempt else set()
+                  metric_ok = metered.get(trial_id, set()) == metric_ids
+                  metric_provenance_ok = metric_provenance.get(trial_id, set()) == provenance if metric_ids else not metric_provenance.get(trial_id, set())
+                  if (scored.get(trial_id, set()) == criterion_ids
+                          and metric_ok
+                          and score_provenance.get(trial_id, set()) == provenance
+                          and metric_provenance_ok):
+                      complete.add(trial_id)
+              return complete
+
+
+          def main(evaluation_run_id, batch_size, scoring_run_execution_id):
+              if batch_size < 1:
+                  raise ValueError("batch_size must be positive")
+              run = ctx.tables.lookup(table="evaluation_runs", column="evaluation_run_id", value=evaluation_run_id)
+              if not run or run.get("status") != "completed":
+                  raise ValueError("Evaluation Run is missing or incomplete")
+              trials = [
+                  row["trial"] for row in all_rows("evaluation_trials")
+                  if row.get("evaluation_run_id") == evaluation_run_id and row.get("status") == "completed"
+              ]
+              if len(trials) != run.get("expected_trial_count"):
+                  raise ValueError("Trial checkpoint coverage is incomplete")
+              evidence = {}
+              for row in all_rows("evaluation_evidence"):
+                  if row.get("evaluation_run_id") == evaluation_run_id:
+                      evidence.setdefault(row.get("trial_id"), []).append({
+                          "sequence": row.get("sequence"),
+                          "evidence_type": row.get("evidence_type"),
+                          "evidence": row.get("evidence"),
+                      })
+              for trial in trials:
+                  trial["evidence"] = sorted(evidence.get(trial["trial_id"], []), key=lambda item: item["sequence"])
+                  if len(trial["evidence"]) < 3:
+                      raise ValueError(f"Trial {trial['trial_id']} has incomplete public evidence")
+              complete = complete_trials(evaluation_run_id, run["profile"], trials)
+              pending = [trial for trial in trials if trial["trial_id"] not in complete]
+              batches = [
+                  [{"evaluation_run_id": evaluation_run_id,
+                    "lab_id": run["lab_id"],
+                    "scoring_run_execution_id": scoring_run_execution_id,
+                    "trial": trial} for trial in pending[start:start + batch_size]]
+                  for start in range(0, len(pending), batch_size)
+              ]
+              return {
+                  "batches": batches,
+                  "run": run,
+                  "completed_count": len(complete),
+                  "batch_size": batch_size,
+              }
+
+    - ref: run_scoring_trials
+      action: core.workflow.execute
+      depends_on: [load_scoring_work]
+      for_each: ${{ for var.batch in ACTIONS.load_scoring_work.result.batches }}
+      retry_policy:
+        max_attempts: 1
+        timeout: 3600
+      args:
+        workflow_alias: run_trial_batch
+        wait_strategy: wait
+        fail_strategy: isolated
+        loop_strategy: sequential
+        batch_size: 1
+        trigger_inputs:
+          workflow_alias: scoring_trial
+          items: ${{ var.batch }}
+
+    - ref: verify_scoring_completion
+      action: core.script.run_python
+      depends_on: [run_scoring_trials]
+      args:
+        timeout_seconds: 300
+        inputs:
+          evaluation_run_id: ${{ TRIGGER.evaluation_run_id }}
+          expected_count: ${{ ACTIONS.load_scoring_work.result.run.expected_trial_count }}
+          profile: ${{ ACTIONS.load_scoring_work.result.run.profile }}
+        script: |
+          from tracecat_registry import ctx
+
+
+          def all_rows(table):
+              rows, cursor = [], None
+              while True:
+                  page = ctx.tables.search_rows(table=table, limit=200, cursor=cursor)
+                  if isinstance(page, list):
+                      rows.extend(page)
+                      break
+                  rows.extend(page.get("items", []))
+                  cursor = page.get("next_cursor")
+                  if not page.get("has_more"):
+                      break
+                  if not cursor:
+                      raise ValueError(f"{table} returned has_more without next_cursor")
+              return rows
+
+
+          def main(evaluation_run_id, expected_count, profile):
+              criterion_ids = {item["criterion_id"] for item in profile["criteria"]}
+              metric_ids = {item["metric_id"] for item in profile["metrics"]}
+              scored, score_provenance = {}, {}
+              for row in all_rows("evaluation_scores"):
+                  if row.get("evaluation_run_id") == evaluation_run_id:
+                      scored.setdefault(row.get("trial_id"), set()).add(row.get("criterion_id"))
+                      score_provenance.setdefault(row.get("trial_id"), set()).add((row.get("scoring_run_execution_id"), row.get("scoring_attempt_id")))
+              metered, metric_provenance = {}, {}
+              for row in all_rows("evaluation_metrics"):
+                  if row.get("evaluation_run_id") == evaluation_run_id:
+                      metered.setdefault(row.get("trial_id"), set()).add(row.get("metric_id"))
+                      metric_provenance.setdefault(row.get("trial_id"), set()).add((row.get("scoring_run_execution_id"), row.get("scoring_attempt_id")))
+              attempts = {
+                  row.get("trial_id"): row for row in all_rows("scoring_attempts")
+                  if row.get("evaluation_run_id") == evaluation_run_id and row.get("status") == "completed"
+              }
+              complete = 0
+              for trial_id, attempt in attempts.items():
+                  provenance = {(attempt.get("scoring_run_execution_id"), attempt.get("scoring_attempt_id"))}
+                  metric_ok = metered.get(trial_id, set()) == metric_ids
+                  metric_provenance_ok = metric_provenance.get(trial_id, set()) == provenance if metric_ids else not metric_provenance.get(trial_id, set())
+                  if (scored.get(trial_id, set()) == criterion_ids
+                          and metric_ok
+                          and score_provenance.get(trial_id, set()) == provenance
+                          and metric_provenance_ok):
+                      complete += 1
+              if complete != expected_count:
+                  raise ValueError(f"Scoring checkpoint coverage incomplete: expected {expected_count}, found {complete}; resume this Judge Run")
+              return complete
+
+  returns:
+    evaluation_run_id: ${{ TRIGGER.evaluation_run_id }}
+    scoring_run_execution_id: ${{ TRIGGER.scoring_run_execution_id }}
+    scorer_kind: ${{ ACTIONS.load_scoring_work.result.run.profile.scorer.kind }}
+    scorer_workflow_alias: ${{ ACTIONS.load_scoring_work.result.run.profile.scorer.workflow_alias }}
+    resumed_completed_count: ${{ ACTIONS.load_scoring_work.result.completed_count }}
+    scored_count: ${{ ACTIONS.verify_scoring_completion.result }}
+    status: scored

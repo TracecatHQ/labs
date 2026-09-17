@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "agent_presets": [
+    {
+      "name": "Lab 007 Candidate",
+      "slug": "007-candidate",
+      "description": "Answers one English SEvenLLM multiple-choice question with one option letter.",
+      "instructions_file": "agent_presets/candidate.md",
+      "actions": [
+        "core.cases.get_case"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "alias": "score_mcq_answer",
+      "file": "workflows/score-mcq-answer.yml",
+      "category": "scorer"
+    }
+  ]
+}

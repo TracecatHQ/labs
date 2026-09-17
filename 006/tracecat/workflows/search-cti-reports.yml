@@ -1,0 +1,31 @@
+version: 1
+definition:
+  title: Search CTI-REALM Reports
+  description: Search pinned CTI reports by tag or keyword.
+  entrypoint:
+    ref: search
+    expects:
+      tag: {type: str, default: "", description: "Exact report tag, case-insensitive."}
+      keyword: {type: str, default: "", description: Keyword in title or content.}
+      limit: {type: int, default: 5, description: "Maximum reports, clamped to 1..10."}
+  actions:
+    - ref: search
+      action: core.script.run_python
+      args:
+        allow_network: true
+        dependencies: ["requests==2.32.5"]
+        inputs: {tag: "${{ TRIGGER.tag }}", keyword: "${{ TRIGGER.keyword }}", limit: "${{ TRIGGER.limit }}"}
+        script: |
+          import json, requests
+          def main(tag="", keyword="", limit=5):
+              text=requests.get("http://lab006-references/reports.jsonl",timeout=30).text
+              tag,keyword=str(tag).lower(),str(keyword).lower(); out=[]
+              for line in text.splitlines():
+                  row=json.loads(line); tags=[str(x).lower() for x in row.get("tags",[])]
+                  hay=f"{row.get('title','')} {row.get('content','')}".lower()
+                  if tag and tag not in tags: continue
+                  if keyword and keyword not in hay: continue
+                  out.append(row)
+                  if len(out)>=max(1,min(int(limit),10)): break
+              return {"tool":"search_cti_reports","tag":tag,"keyword":keyword,"reports":out,"count":len(out)}
+  returns: ${{ ACTIONS.search.result }}

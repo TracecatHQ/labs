@@ -1,0 +1,35 @@
+version: 1
+definition:
+  title: Search Pinned MITRE ATT&CK
+  description: Search pinned MITRE ATT&CK technique bundles.
+  entrypoint:
+    ref: search
+    expects:
+      keyword: {type: str, default: "", description: Name/description keyword.}
+      tactic: {type: str, default: "", description: ATT&CK tactic name.}
+      domain: {type: str, default: enterprise-attack, description: "enterprise-attack, mobile-attack, or ics-attack."}
+      limit: {type: int, default: 10, description: "Maximum techniques, clamped to 1..20."}
+  actions:
+    - ref: search
+      action: core.script.run_python
+      args:
+        allow_network: true
+        dependencies: ["requests==2.32.5"]
+        inputs: {keyword: "${{ TRIGGER.keyword }}", tactic: "${{ TRIGGER.tactic }}", domain: "${{ TRIGGER.domain }}", limit: "${{ TRIGGER.limit }}"}
+        script: |
+          import requests
+          def main(keyword="", tactic="", domain="enterprise-attack", limit=10):
+              if domain not in {"enterprise-attack","mobile-attack","ics-attack"}: raise ValueError("invalid domain")
+              bundle=requests.get(f"http://lab006-references/{domain}.json",timeout=45).json()
+              keyword,tactic=str(keyword).lower(),str(tactic).lower().replace(" ","-"); out=[]
+              for obj in bundle.get("objects",[]):
+                  if obj.get("type")!="attack-pattern" or obj.get("revoked") or obj.get("x_mitre_deprecated"): continue
+                  phases=[x.get("phase_name","") for x in obj.get("kill_chain_phases",[])]
+                  hay=f"{obj.get('name','')} {obj.get('description','')}".lower()
+                  if keyword and keyword not in hay: continue
+                  if tactic and tactic not in phases: continue
+                  refs=obj.get("external_references",[]); ext=next((x.get("external_id") for x in refs if x.get("external_id")),"")
+                  out.append({"technique_id":ext,"name":obj.get("name"),"description":obj.get("description",""),"tactics":phases})
+                  if len(out)>=max(1,min(int(limit),20)): break
+              return {"tool":"search_mitre_techniques","techniques":out,"count":len(out)}
+  returns: ${{ ACTIONS.search.result }}

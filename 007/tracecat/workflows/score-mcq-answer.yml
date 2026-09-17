@@ -1,0 +1,39 @@
+version: 1
+definition:
+  title: Score MCQ Answer
+  description: Deterministically score one frozen SEvenLLM English MCQ Trial.
+  entrypoint:
+    ref: score
+    expects:
+      trial:
+        type: dict[str, Any]
+        description: Full frozen Trial, including Submission, Oracle, and Profile.
+  actions:
+    - ref: score
+      action: core.script.run_python
+      args:
+        inputs:
+          trial: ${{ TRIGGER.trial }}
+        script: |
+          def main(trial):
+              answer = str(trial.get("final_answer") or "").strip().upper()
+              expected = str(trial["oracle"]["criteria"]["correct-option"]["expected"]).strip().upper()
+              valid = len(answer) == 1 and answer in "ABCD"
+              value = int(valid and answer == expected)
+              reason = "Exact option match." if value else (
+                  "Final response is not exactly one option letter A-D."
+                  if not valid else "Selected option does not match the hidden answer."
+              )
+              return {
+                  "evaluation_error": None,
+                  "judge_session_id": None,
+                  "scorer_latency_seconds": None,
+                  "criteria": [{
+                      "criterion_id": "correct-option",
+                      "value": value,
+                      "reason": reason,
+                      "evidence_refs": ["final_answer", "oracle.criteria.correct-option.expected"],
+                  }],
+                  "metrics": [{"metric_id": "accuracy", "value": value}],
+              }
+  returns: ${{ ACTIONS.score.result }}

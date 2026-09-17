@@ -1,0 +1,16 @@
+version: 1
+definition:
+  title: Get CTI-REALM Event Source Schema
+  description: Return normalized field names and types for one event source.
+  entrypoint:
+    ref: schema
+    expects:
+      data_source: {type: str, description: Exact source name returned by list_event_sources.}
+  actions:
+    - ref: schema
+      action: core.http_request
+      args:
+        url: ${{ FN.concat("http://lab006-sigma:8080/v1/sources/", TRIGGER.data_source, "/schema") }}
+        method: GET
+        timeout: 20
+  returns: ${{ ACTIONS.schema.result.data }}

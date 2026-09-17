@@ -1,0 +1,32 @@
+version: 1
+definition:
+  title: __LAB_ID__ Judge — Run second
+  description: RUN SECOND. Scores a completed Lab __LAB_ID__ Candidate run through the shared scoring runtime.
+  entrypoint:
+    ref: run_judge
+    expects:
+      evaluation_run_id:
+        type: str
+        description: Evaluation Run ID returned by Lab __LAB_ID__ Candidate.
+      batch_size:
+        type: int
+        default: 4
+        description: Maximum Scoring Trials in flight.
+  config:
+    timeout: 0
+  actions:
+    - ref: run_judge
+      action: core.workflow.execute
+      retry_policy:
+        max_attempts: 1
+        timeout: 86400
+      args:
+        workflow_alias: judge_run
+        wait_strategy: wait
+        fail_strategy: all
+        timeout: 86400
+        trigger_inputs:
+          evaluation_run_id: ${{ TRIGGER.evaluation_run_id }}
+          scoring_run_execution_id: ${{ ENV.workflow.execution_id }}
+          batch_size: ${{ TRIGGER.batch_size }}
+  returns: ${{ ACTIONS.run_judge.result }}

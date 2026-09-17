@@ -1,0 +1,138 @@
+{
+  "schema_version": 2,
+  "profile_id": "lab-006-cti-realm-sigma-derivative-50",
+  "profile_version": 1,
+  "scorer": {
+    "kind": "hybrid",
+    "workflow_alias": "score_cti_realm",
+    "judge_preset": "006-judge"
+  },
+  "criteria": [
+    {
+      "criterion_id": "c0-cti-alignment",
+      "label": "C0 CTI report alignment",
+      "type": "numeric",
+      "weight": 12.5,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "range": {
+        "min": 0,
+        "max": 1
+      },
+      "judge_instruction": "Score 0 unless recorded evidence contains a successful search_cti_reports call with a nonempty tag and at least one returned report. Otherwise judge whether the visible analysis connects the searched tag and returned report titles/content to the detection objective. Grade 0..1; private reasoning is unavailable and must not be inferred."
+    },
+    {
+      "criterion_id": "c1-mitre-mapping",
+      "label": "C1 MITRE technique Jaccard",
+      "type": "numeric",
+      "weight": 7.5,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "range": {
+        "min": 0,
+        "max": 1
+      },
+      "judge_instruction": "Deterministic scorer retains the upstream matched-set calculation: extract visible ATT&CK technique IDs, keep matches to the Oracle set, then compute Jaccard against the Oracle set."
+    },
+    {
+      "criterion_id": "c2-data-exploration",
+      "label": "C2 data-source Jaccard",
+      "type": "numeric",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "range": {
+        "min": 0,
+        "max": 1
+      },
+      "judge_instruction": "Deterministic scorer retains the upstream matched-set calculation: keep data sources from successful get_event_source_schema and sample_event_source calls that match the Oracle source set, then compute Jaccard against the Oracle set."
+    },
+    {
+      "criterion_id": "c3-sigma-execution",
+      "label": "C3 iterative Sigma execution",
+      "type": "binary",
+      "weight": 5,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Deterministic scorer requires two distinct execute_sigma_rule calls whose recorded results are successful and contain at least one matched event."
+    },
+    {
+      "criterion_id": "c4-matched-event-f1",
+      "label": "C4 matched-event Oracle F1",
+      "type": "numeric",
+      "weight": 50,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "range": {
+        "min": 0,
+        "max": 1
+      },
+      "judge_instruction": "Deterministic scorer first verifies that every submitted field and value is an exact projection of an event in a recorded successful execution of the submitted sigma_rule and data_source, then computes field-slot precision, field recall, and F1 from the hidden Oracle regex patterns over those events."
+    },
+    {
+      "criterion_id": "c4-sigma-syntax",
+      "label": "C4 Sigma syntax quality",
+      "type": "numeric",
+      "weight": 3.75,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "range": {
+        "min": 0,
+        "max": 1
+      },
+      "judge_instruction": "Judge the submitted Sigma YAML directly without compiling or adapting it. Grade valid YAML, required title/logsource/detection/condition fields, and recommended id/status/description/level fields from 0..1."
+    },
+    {
+      "criterion_id": "c4-sigma-specificity",
+      "label": "C4 Sigma detection specificity",
+      "type": "numeric",
+      "weight": 11.25,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "range": {
+        "min": 0,
+        "max": 1
+      },
+      "judge_instruction": "Judge how precisely the submitted Sigma detection matches the objective, limits false positives, and would work in production. Grade 0..1. This is 75% of the Sigma quality subscore; syntax is 25%."
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "normalized_score",
+      "label": "Weighted CTI-REALM Sigma derivative reward",
+      "type": "numeric"
+    },
+    {
+      "metric_id": "trajectory_score",
+      "label": "C0-C3 weighted reward",
+      "type": "numeric"
+    },
+    {
+      "metric_id": "outcome_score",
+      "label": "C4 weighted reward",
+      "type": "numeric"
+    },
+    {
+      "metric_id": "iterative_sigma_execution",
+      "label": "Two distinct successful nonempty Sigma executions",
+      "type": "boolean",
+      "source_criterion_id": "c3-sigma-execution"
+    },
+    {
+      "metric_id": "matched_event_f1",
+      "label": "Matched-event Oracle F1",
+      "type": "numeric",
+      "source_criterion_id": "c4-matched-event-f1"
+    },
+    {
+      "metric_id": "matched_events_verified",
+      "label": "Submitted events verified against exact rule and source execution",
+      "type": "boolean"
+    },
+    {
+      "metric_id": "sample_id",
+      "label": "CTI-REALM sample",
+      "type": "text"
+    }
+  ]
+}

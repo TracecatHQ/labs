@@ -1,0 +1,19 @@
+version: 1
+definition:
+  title: Query Threat Logs
+  description: Candidate-visible, read-only query path to the Simbian sample SQLite database.
+  entrypoint:
+    ref: select_mode
+    expects:
+      query:
+        type: str
+        description: A single read-only SQLite statement, or the literal string SCHEMA.
+  actions:
+    - ref: select_mode
+      action: core.http_request
+      args:
+        url: http://lab004-threat-logs:8080/query
+        method: POST
+        payload:
+          query: ${{ TRIGGER.query }}
+  returns: ${{ ACTIONS.select_mode.result.data }}

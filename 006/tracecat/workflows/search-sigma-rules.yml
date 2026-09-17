@@ -1,0 +1,31 @@
+version: 1
+definition:
+  title: Search Pinned Sigma Rule Index
+  description: Search the pinned Sigma rule reference index.
+  entrypoint:
+    ref: search
+    expects:
+      keyword: {type: str, default: "", description: Title/description keyword.}
+      technique_id: {type: str, default: "", description: ATT&CK technique ID.}
+      platform: {type: str, default: "", description: Platform filter.}
+      limit: {type: int, default: 5, description: "Maximum rules, clamped to 1..20."}
+  actions:
+    - ref: search
+      action: core.script.run_python
+      args:
+        allow_network: true
+        dependencies: ["requests==2.32.5"]
+        inputs: {keyword: "${{ TRIGGER.keyword }}", technique_id: "${{ TRIGGER.technique_id }}", platform: "${{ TRIGGER.platform }}", limit: "${{ TRIGGER.limit }}"}
+        script: |
+          import requests
+          def main(keyword="",technique_id="",platform="",limit=5):
+              rules=requests.get("http://lab006-references/sigma_rules.json",timeout=30).json()
+              keyword,technique_id,platform=str(keyword).lower(),str(technique_id).upper(),str(platform).lower(); out=[]
+              for rule in rules:
+                  if keyword and keyword not in f"{rule.get('title','')} {rule.get('description','')}".lower(): continue
+                  if technique_id and technique_id not in rule.get("techniques",[]): continue
+                  if platform and platform not in str(rule.get("platform","")).lower(): continue
+                  out.append(rule)
+                  if len(out)>=max(1,min(int(limit),20)): break
+              return {"tool":"search_sigma_rules","rules":out,"count":len(out)}
+  returns: ${{ ACTIONS.search.result }}

@@ -1,0 +1,256 @@
+version: 1
+definition:
+  title: Run Evaluation
+  description: Page through Case Templates and checkpoint batched child Trials.
+  entrypoint:
+    ref: load_work
+    expects:
+      lab_id:
+        type: str
+        description: Lab whose retained Case Templates are eligible for this run.
+      candidate_workflow_alias:
+        type: str
+        description: Lab-specific Candidate workflow alias.
+      new_evaluation_run_id:
+        type: str
+        description: Public Run Evaluation wrapper execution ID used for checkpoints and provenance.
+      case_ids:
+        type: list[str]
+        default: []
+        description: Optional stable Case Template IDs; empty selects every enabled template.
+      evaluation_run_id:
+        type: str
+        default: ""
+        description: Existing run ID to resume; empty starts a new run.
+      batch_size:
+        type: int
+        default: 4
+        description: Maximum Candidate Trial child workflows in flight.
+  config:
+    timeout: 0
+  actions:
+    - ref: load_work
+      action: core.script.run_python
+      args:
+        timeout_seconds: 300
+        inputs:
+          requested_case_ids: ${{ TRIGGER.case_ids }}
+          requested_lab_id: ${{ TRIGGER.lab_id }}
+          requested_run_id: ${{ TRIGGER.evaluation_run_id }}
+          new_run_id: ${{ TRIGGER.new_evaluation_run_id }}
+          batch_size: ${{ TRIGGER.batch_size }}
+          candidate_workflow_alias: ${{ TRIGGER.candidate_workflow_alias }}
+        script: |
+          import hashlib
+          import json
+          from tracecat_registry import ctx
+
+
+          def all_rows(table):
+              rows, cursor = [], None
+              while True:
+                  page = ctx.tables.search_rows(table=table, limit=200, cursor=cursor)
+                  if isinstance(page, list):
+                      rows.extend(page)
+                      break
+                  rows.extend(page.get("items", []))
+                  cursor = page.get("next_cursor")
+                  if not page.get("has_more"):
+                      break
+                  if not cursor:
+                      raise ValueError(f"{table} returned has_more without next_cursor")
+              return rows
+
+
+          def main(requested_case_ids, requested_lab_id, requested_run_id, new_run_id, batch_size, candidate_workflow_alias):
+              if batch_size < 1:
+                  raise ValueError("batch_size must be positive")
+              if not requested_lab_id:
+                  raise ValueError("lab_id is required")
+              run_id = requested_run_id or new_run_id
+              available = [
+                  row for row in all_rows("case_templates")
+                  if row.get("enabled") is True and row.get("lab_id") == requested_lab_id
+              ]
+              by_id = {row.get("case_id"): row for row in available}
+              existing = ctx.tables.lookup(table="evaluation_runs", column="evaluation_run_id", value=run_id)
+              if requested_run_id and not existing:
+                  raise ValueError("cannot resume an unknown Evaluation Run")
+              if existing:
+                  if existing.get("lab_id") != requested_lab_id:
+                      raise ValueError("resume lab_id does not match the frozen Evaluation Run")
+                  selected_case_ids = existing.get("selected_case_ids") or []
+                  if requested_case_ids and requested_case_ids != selected_case_ids:
+                      raise ValueError("resume CASE_IDS must exactly match the frozen Evaluation Run selection")
+              elif requested_case_ids:
+                  if len(requested_case_ids) != len(set(requested_case_ids)):
+                      raise ValueError("CASE_IDS contains duplicates")
+                  selected_case_ids = requested_case_ids
+              else:
+                  selected_case_ids = sorted(by_id)
+              if selected_case_ids:
+                  missing = [case_id for case_id in selected_case_ids if case_id not in by_id]
+                  if missing:
+                      raise ValueError(f"selected Case Templates are missing or disabled: {missing}")
+                  templates = [by_id[case_id] for case_id in selected_case_ids]
+              else:
+                  templates = []
+              if not templates:
+                  raise ValueError("no enabled Case Templates selected")
+              identities = {(row["profile_id"], row["profile_version"]) for row in templates}
+              if len(identities) != 1:
+                  raise ValueError("selected Case Templates do not share one profile")
+              material = [
+                  {
+                      "schema_version": row["schema_version"],
+                      "lab_id": row["lab_id"],
+                      "case_id": row["case_id"],
+                      "case": row["case"],
+                      "oracle": row["oracle"],
+                      "profile": row["profile"],
+                      "profile_id": row["profile_id"],
+                      "profile_version": row["profile_version"],
+                  }
+                  for row in templates
+              ]
+              template_digest = hashlib.sha256(
+                  json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+              ).hexdigest()
+              if existing:
+                  if existing.get("template_digest") != template_digest:
+                      raise ValueError("selected Case Templates or Scoring Profile changed since this Evaluation Run was created")
+                  if existing.get("profile_id") != templates[0]["profile_id"] or existing.get("profile_version") != templates[0]["profile_version"]:
+                      raise ValueError("frozen Evaluation Run profile identity changed")
+              completed = {
+                  row.get("case_id")
+                  for row in all_rows("evaluation_trials")
+                  if row.get("evaluation_run_id") == run_id and row.get("status") == "completed"
+              }
+              pending = [row for row in templates if row["case_id"] not in completed]
+              batches = [
+                  [{"evaluation_run_id": run_id,
+                    "candidate_workflow_alias": candidate_workflow_alias,
+                    "template": row} for row in pending[start:start + batch_size]]
+                  for start in range(0, len(pending), batch_size)
+              ]
+              return {
+                  "batches": batches,
+                  "evaluation_run_id": run_id,
+                  "templates": templates,
+                  "completed_count": len(completed.intersection(selected_case_ids)),
+                  "expected_count": len(templates),
+                  "batch_size": batch_size,
+                  "profile": templates[0]["profile"],
+                  "lab_id": templates[0]["lab_id"],
+                  "selected_case_ids": selected_case_ids,
+                  "template_digest": template_digest,
+                  "existing_run_row_id": existing.get("id") if existing else None,
+                  "created_at": existing.get("created_at") if existing else None,
+              }
+
+    - ref: persist_running_run
+      action: core.script.run_python
+      depends_on: [load_work]
+      args:
+        inputs:
+          work: ${{ ACTIONS.load_work.result }}
+        script: |
+          from tracecat_registry import ctx
+
+
+          def main(work):
+              if work.get("existing_run_row_id"):
+                  return ctx.tables.update_row(
+                      table="evaluation_runs",
+                      row_id=work["existing_run_row_id"],
+                      row_data={
+                          "status": "running",
+                          "completed_trial_count": work["completed_count"],
+                          "batch_size": work["batch_size"],
+                      },
+                  )
+              return ctx.tables.insert_row(
+                  table="evaluation_runs",
+                  row_data={
+                      "evaluation_run_id": work["evaluation_run_id"],
+                      "schema_version": 2,
+                      "lab_id": work["lab_id"],
+                      "profile_id": work["profile"]["profile_id"],
+                      "profile_version": work["profile"]["profile_version"],
+                      "profile": work["profile"],
+                      "selected_case_ids": work["selected_case_ids"],
+                      "template_digest": work["template_digest"],
+                      "status": "running",
+                      "expected_trial_count": work["expected_count"],
+                      "completed_trial_count": work["completed_count"],
+                      "batch_size": work["batch_size"],
+                  },
+              )
+
+    - ref: run_candidate_trials
+      action: core.workflow.execute
+      depends_on: [persist_running_run]
+      for_each: ${{ for var.batch in ACTIONS.load_work.result.batches }}
+      retry_policy:
+        max_attempts: 1
+        timeout: 3600
+      args:
+        workflow_alias: run_trial_batch
+        wait_strategy: wait
+        fail_strategy: all
+        loop_strategy: sequential
+        batch_size: 1
+        trigger_inputs:
+          workflow_alias: candidate_trial
+          items: ${{ var.batch }}
+
+    - ref: finalize_run
+      action: core.script.run_python
+      depends_on: [run_candidate_trials]
+      args:
+        inputs:
+          evaluation_run_id: ${{ ACTIONS.load_work.result.evaluation_run_id }}
+          expected_count: ${{ ACTIONS.load_work.result.expected_count }}
+          selected_case_ids: ${{ ACTIONS.load_work.result.selected_case_ids }}
+        script: |
+          from tracecat_registry import ctx
+
+
+          def main(evaluation_run_id, expected_count, selected_case_ids):
+              rows, cursor = [], None
+              while True:
+                  page = ctx.tables.search_rows(table="evaluation_trials", limit=200, cursor=cursor)
+                  if isinstance(page, list):
+                      rows.extend(page)
+                      break
+                  rows.extend(page.get("items", []))
+                  cursor = page.get("next_cursor")
+                  if not page.get("has_more"):
+                      break
+                  if not cursor:
+                      raise ValueError("evaluation_trials pagination stopped without a cursor")
+              completed = [row for row in rows if row.get("evaluation_run_id") == evaluation_run_id and row.get("status") == "completed"]
+              completed_case_ids = {row.get("case_id") for row in completed}
+              if len(completed) != expected_count or completed_case_ids != set(selected_case_ids):
+                  raise ValueError(f"Trial checkpoint coverage incomplete: expected {expected_count}, found {len(completed)}")
+              return len(completed)
+
+    - ref: persist_completed_run
+      action: core.table.update_row
+      depends_on: [finalize_run]
+      args:
+        table: evaluation_runs
+        row_id: ${{ ACTIONS.persist_running_run.result.id }}
+        row_data:
+          status: completed
+          completed_trial_count: ${{ ACTIONS.finalize_run.result }}
+          batch_size: ${{ ACTIONS.load_work.result.batch_size }}
+
+  returns:
+    schema_version: 2
+    evaluation_run_id: ${{ ACTIONS.load_work.result.evaluation_run_id }}
+    lab_id: ${{ ACTIONS.load_work.result.lab_id }}
+    profile_id: ${{ ACTIONS.load_work.result.profile.profile_id }}
+    profile_version: ${{ ACTIONS.load_work.result.profile.profile_version }}
+    status: completed
+    trial_count: ${{ ACTIONS.finalize_run.result }}

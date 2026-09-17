@@ -31,7 +31,7 @@ func run() int {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	outputs, err := grading.LoadTerraformOutputs(ctx, *root, *lab)
+	outputs, err := grading.LoadTerraformOutputs(ctx, *root)
 	if err != nil {
 		return fail(err)
 	}
@@ -53,6 +53,7 @@ func run() int {
 	}
 	fmt.Println(report.TerminalReport())
 	fmt.Printf("Wrote %s\n", filepath.Join(outputDir, "scores.csv"))
+	fmt.Printf("Wrote %s\n", filepath.Join(outputDir, "metrics.csv"))
 	fmt.Printf("Wrote %s\n", filepath.Join(outputDir, "summary.json"))
 	return 0
 }

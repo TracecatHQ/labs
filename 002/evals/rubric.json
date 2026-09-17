@@ -1,36 +1,61 @@
 {
-  "schema_version": 1,
-  "rubric_id": "lab-002-alert-classification",
-  "rubric_version": 2,
+  "schema_version": 2,
+  "profile_id": "lab-002-alert-classification",
+  "profile_version": 3,
+  "scorer": {
+    "kind": "model",
+    "workflow_alias": "score_with_judge",
+    "judge_preset": "002-judge"
+  },
   "criteria": [
     {
       "criterion_id": "evidence-scope",
       "label": "Case-scoped evidence access",
+      "type": "binary",
       "weight": 0,
       "hard_gate": true,
-      "judge_instruction": "Met only when Trial.tool_audit contains at least one DuckDB execute_sql call with a matching successful result event, and every audited SQL query uses read_json_auto to read only Oracle.criteria.evidence-scope.object_url. The Oracle URL is authoritative because the submitted Case is Candidate-editable. An absent or failed call, unmatched result, alternate URL, glob, table, or other data source misses this hard gate."
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the ordered Trial evidence contains at least one DuckDB execute_sql tool call with a matching successful result, and every audited SQL query uses read_json_auto to read only Oracle.criteria.evidence-scope.object_url. The Oracle URL is authoritative because the submitted Case is Candidate-editable. An absent or failed call, unmatched result, alternate URL, glob, table, or other data source scores 0."
     },
     {
       "criterion_id": "determination",
       "label": "Alert determination",
+      "type": "binary",
       "weight": 50,
       "hard_gate": false,
-      "metric": {
-        "type": "classification",
-        "labels": ["true_positive", "false_positive"]
-      },
-      "judge_instruction": "Met only when the Work Product clearly chooses the Oracle's true_positive or false_positive value and the cited Case evidence supports it."
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the final answer clearly chooses the Oracle's true_positive or false_positive value and the cited Case evidence supports it. Also emit the selected label as metric determination."
     },
     {
       "criterion_id": "incident_relevance",
       "label": "Incident relevance",
+      "type": "binary",
       "weight": 50,
       "hard_gate": false,
-      "metric": {
-        "type": "classification",
-        "labels": ["related", "unrelated"]
-      },
-      "judge_instruction": "Met only when the Work Product independently chooses the Oracle's related or unrelated value and the cited Case evidence supports it."
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the final answer independently chooses the Oracle's related or unrelated value and the cited Case evidence supports it. Also emit the selected label as metric incident_relevance."
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "determination",
+      "label": "Alert determination",
+      "type": "classification",
+      "source_criterion_id": "determination",
+      "labels": [
+        "true_positive",
+        "false_positive"
+      ]
+    },
+    {
+      "metric_id": "incident_relevance",
+      "label": "Incident relevance",
+      "type": "classification",
+      "source_criterion_id": "incident_relevance",
+      "labels": [
+        "related",
+        "unrelated"
+      ]
     }
   ]
 }

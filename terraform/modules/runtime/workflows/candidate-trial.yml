@@ -1,0 +1,171 @@
+version: 1
+definition:
+  title: Candidate Trial
+  description: Execute and checkpoint one immutable Candidate Trial.
+  entrypoint:
+    ref: create_trial_case
+    expects:
+      evaluation_run_id:
+        type: str
+      candidate_workflow_alias:
+        type: str
+      template:
+        type: dict
+  config:
+    timeout: 3600
+  actions:
+    - ref: create_trial_case
+      action: core.cases.create_case
+      args:
+        summary: ${{ TRIGGER.template.case.title }}
+        description: ${{ TRIGGER.template.case.description }}
+        priority: ${{ TRIGGER.template.case.priority }}
+        severity: ${{ TRIGGER.template.case.severity }}
+        status: new
+        fields: ${{ TRIGGER.template.case.fields }}
+        payload: ${{ TRIGGER.template.case.payload }}
+        tags: ${{ TRIGGER.template.case.tags }}
+        create_missing_tags: true
+
+    - ref: run_candidate
+      action: core.workflow.execute
+      depends_on: [create_trial_case]
+      retry_policy:
+        max_attempts: 1
+        timeout: 3600
+      args:
+        workflow_alias: run_candidate
+        wait_strategy: wait
+        fail_strategy: all
+        trigger_inputs:
+          candidate_workflow_alias: ${{ TRIGGER.candidate_workflow_alias }}
+          case_id: ${{ ACTIONS.create_trial_case.result.id }}
+
+    - ref: save_final_answer
+      action: core.cases.create_comment
+      depends_on: [run_candidate]
+      args:
+        case_id: ${{ ACTIONS.create_trial_case.result.id }}
+        content: ${{ FN.serialize_json(ACTIONS.run_candidate.result.output) }}
+
+    - ref: capture_submission_case
+      action: core.cases.get_case
+      depends_on: [save_final_answer]
+      args:
+        case_id: ${{ ACTIONS.create_trial_case.result.id }}
+
+    - ref: capture_submission_comments
+      action: core.cases.list_comments
+      depends_on: [save_final_answer]
+      args:
+        case_id: ${{ ACTIONS.create_trial_case.result.id }}
+
+    - ref: freeze_evidence
+      action: core.script.run_python
+      depends_on: [capture_submission_case, capture_submission_comments]
+      args:
+        inputs:
+          final_answer: ${{ ACTIONS.run_candidate.result.output }}
+          case: ${{ ACTIONS.capture_submission_case.result }}
+          comments: ${{ ACTIONS.capture_submission_comments.result }}
+          message_history: ${{ ACTIONS.run_candidate.result.message_history }}
+        script: |
+          def main(final_answer, case, comments, message_history=None):
+              events = [
+                  {"sequence": 0, "evidence_type": "final_answer", "evidence": final_answer},
+                  {"sequence": 1, "evidence_type": "case", "evidence": case},
+                  {"sequence": 2, "evidence_type": "comments", "evidence": comments},
+              ]
+
+              def walk(value):
+                  if isinstance(value, list):
+                      for item in value:
+                          yield from walk(item)
+                  elif isinstance(value, dict):
+                      if value.get("id") and value.get("name") and "input" in value:
+                          yield {
+                              "evidence_type": "tool_call",
+                              "evidence": {
+                                  "tool_call_id": value["id"],
+                                  "tool_name": value["name"],
+                                  "input": value["input"],
+                              },
+                          }
+                      elif value.get("tool_use_id"):
+                          yield {
+                              "evidence_type": "tool_result",
+                              "evidence": {
+                                  "tool_call_id": value["tool_use_id"],
+                                  "success": not bool(value.get("is_error", False)),
+                                  "content": value.get("content"),
+                              },
+                          }
+                      else:
+                          for item in value.values():
+                              yield from walk(item)
+
+              for event in walk(message_history or []):
+                  event["sequence"] = len(events)
+                  events.append(event)
+              return events
+
+    - ref: build_trial
+      action: core.transform.reshape
+      depends_on: [freeze_evidence]
+      args:
+        value:
+          trial_id: ${{ ACTIONS.create_trial_case.result.id }}
+          case_id: ${{ TRIGGER.template.case_id }}
+          trial_number: 1
+          status: completed
+          candidate_session_id: ${{ ACTIONS.run_candidate.result.session_id }}
+          candidate_agent_latency_seconds: ${{ ACTIONS.run_candidate.result.duration }}
+          candidate_completed_at: ${{ FN.utcnow(True) }}
+          final_answer: ${{ ACTIONS.run_candidate.result.output }}
+          submission:
+            case: ${{ ACTIONS.capture_submission_case.result }}
+            comments: ${{ ACTIONS.capture_submission_comments.result }}
+          oracle: ${{ TRIGGER.template.oracle }}
+          profile: ${{ TRIGGER.template.profile }}
+
+    - ref: build_evidence_rows
+      action: core.transform.reshape
+      depends_on: [build_trial]
+      for_each: ${{ for var.event in ACTIONS.freeze_evidence.result }}
+      args:
+        value:
+          evidence_key: ${{ FN.concat(TRIGGER.evaluation_run_id, ":", ACTIONS.build_trial.result.trial_id, ":", str(var.event.sequence)) }}
+          schema_version: 2
+          lab_id: ${{ TRIGGER.template.lab_id }}
+          evaluation_run_id: ${{ TRIGGER.evaluation_run_id }}
+          trial_id: ${{ ACTIONS.build_trial.result.trial_id }}
+          sequence: ${{ var.event.sequence }}
+          evidence_type: ${{ var.event.evidence_type }}
+          evidence: ${{ var.event.evidence }}
+
+    - ref: persist_evidence
+      action: core.table.insert_rows
+      depends_on: [build_evidence_rows]
+      args:
+        table: evaluation_evidence
+        rows_data: ${{ ACTIONS.build_evidence_rows.result }}
+        upsert: true
+
+    - ref: persist_trial
+      action: core.table.insert_row
+      depends_on: [persist_evidence]
+      args:
+        table: evaluation_trials
+        row_data:
+          trial_key: ${{ FN.concat(TRIGGER.evaluation_run_id, ":", ACTIONS.build_trial.result.trial_id) }}
+          schema_version: 2
+          lab_id: ${{ TRIGGER.template.lab_id }}
+          evaluation_run_id: ${{ TRIGGER.evaluation_run_id }}
+          trial_id: ${{ ACTIONS.build_trial.result.trial_id }}
+          case_id: ${{ TRIGGER.template.case_id }}
+          trial_number: 1
+          status: completed
+          trial: ${{ ACTIONS.build_trial.result }}
+        upsert: true
+
+  returns: ${{ ACTIONS.build_trial.result }}

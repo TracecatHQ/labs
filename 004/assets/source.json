@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/simbianai/cyber_defense_benchmark",
+  "revision": "e8b86d01ccefe338d455e61505ca285943635b27",
+  "license": "MIT",
+  "files": {
+    "sample.zip": "95fac13ce7169e02a58e6038be2b7855832c7b05df59702e70d8a64fc523e264",
+    "sample-data.zip": "32be295a4d0e1643c42d94219c690d28c2a2a261971fb6bdaa1a06486d935f81",
+    "log_schema.json": "af4ebf52eab7fa0b6f62c14273a23642f472580928631dc94bbbb0eb168621cb"
+  },
+  "sample": {"seed": 176, "events": 155350, "flags": 3912, "chains": 3, "tactics": 9}
+}

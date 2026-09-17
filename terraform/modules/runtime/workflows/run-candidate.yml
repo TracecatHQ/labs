@@ -1,0 +1,26 @@
+version: 1
+definition:
+  title: Run Candidate
+  description: Run one lab-specific Candidate workflow; parent workflows iterate this subflow.
+  entrypoint:
+    ref: run_agent
+    expects:
+      candidate_workflow_alias:
+        type: str
+      case_id:
+        type: str
+  config:
+    timeout: 3600
+  actions:
+    - ref: run_agent
+      action: core.workflow.execute
+      retry_policy:
+        max_attempts: 1
+        timeout: 3600
+      args:
+        workflow_alias: ${{ TRIGGER.candidate_workflow_alias }}
+        wait_strategy: wait
+        fail_strategy: all
+        trigger_inputs:
+          case_id: ${{ TRIGGER.case_id }}
+  returns: ${{ ACTIONS.run_agent.result }}

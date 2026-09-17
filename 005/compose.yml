@@ -1,0 +1,79 @@
+x-mysql: &mysql
+  image: mysql:9.0@sha256:92dc869678019f65d761155dacac660a904f6245bfe1b7997da0a73b2bfc68c9
+  restart: unless-stopped
+  networks: [tracecat]
+  environment:
+    MYSQL_ROOT_PASSWORD: local-lab-root
+    MYSQL_DATABASE: env_monitor_db
+  command: ["--secure-file-priv=/var/lib/mysql-files", "--local-infile=OFF"]
+  healthcheck:
+    test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -plocal-lab-root --silent"]
+    interval: 10s
+    timeout: 5s
+    retries: 60
+    start_period: 90s
+
+services:
+  lab005-mysql-5:
+    <<: *mysql
+    volumes:
+      - ./runtime/sql/incident_5.sql:/docker-entrypoint-initdb.d/10-data.sql:ro
+      - ./runtime/data_anonymized/incidents/incident_5:/var/lib/mysql-files
+      - mysql-5:/var/lib/mysql
+  lab005-mysql-34:
+    <<: *mysql
+    volumes:
+      - ./runtime/sql/incident_34.sql:/docker-entrypoint-initdb.d/10-data.sql:ro
+      - ./runtime/data_anonymized/incidents/incident_34:/var/lib/mysql-files
+      - mysql-34:/var/lib/mysql
+  lab005-mysql-38:
+    <<: *mysql
+    volumes:
+      - ./runtime/sql/incident_38.sql:/docker-entrypoint-initdb.d/10-data.sql:ro
+      - ./runtime/data_anonymized/incidents/incident_38:/var/lib/mysql-files
+      - mysql-38:/var/lib/mysql
+  lab005-mysql-39:
+    <<: *mysql
+    volumes:
+      - ./runtime/sql/incident_39.sql:/docker-entrypoint-initdb.d/10-data.sql:ro
+      - ./runtime/data_anonymized/incidents/incident_39:/var/lib/mysql-files
+      - mysql-39:/var/lib/mysql
+  lab005-mysql-55:
+    <<: *mysql
+    volumes:
+      - ./runtime/sql/incident_55.sql:/docker-entrypoint-initdb.d/10-data.sql:ro
+      - ./runtime/data_anonymized/incidents/incident_55:/var/lib/mysql-files
+      - mysql-55:/var/lib/mysql
+  lab005-mysql-134:
+    <<: *mysql
+    volumes:
+      - ./runtime/sql/incident_134.sql:/docker-entrypoint-initdb.d/10-data.sql:ro
+      - ./runtime/data_anonymized/incidents/incident_134:/var/lib/mysql-files
+      - mysql-134:/var/lib/mysql
+  lab005-mysql-166:
+    <<: *mysql
+    volumes:
+      - ./runtime/sql/incident_166.sql:/docker-entrypoint-initdb.d/10-data.sql:ro
+      - ./runtime/data_anonymized/incidents/incident_166:/var/lib/mysql-files
+      - mysql-166:/var/lib/mysql
+  lab005-mysql-322:
+    <<: *mysql
+    volumes:
+      - ./runtime/sql/incident_322.sql:/docker-entrypoint-initdb.d/10-data.sql:ro
+      - ./runtime/data_anonymized/incidents/incident_322:/var/lib/mysql-files
+      - mysql-322:/var/lib/mysql
+
+volumes:
+  mysql-5:
+  mysql-34:
+  mysql-38:
+  mysql-39:
+  mysql-55:
+  mysql-134:
+  mysql-166:
+  mysql-322:
+
+networks:
+  tracecat:
+    external: true
+    name: ${TRACECAT_DOCKER_NETWORK:-tracecat-labs_core}

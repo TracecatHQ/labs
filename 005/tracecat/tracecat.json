@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "secrets": [],
+  "agent_presets": [
+    {
+      "name": "Lab 005 Candidate",
+      "slug": "005-candidate",
+      "description": "Investigates one SecRL incident question with bounded read-only SQL.",
+      "instructions_file": "agent_presets/candidate.md",
+      "actions": [
+        "core.cases.create_comment",
+        "core.cases.get_case",
+        "core.workflow.execute"
+      ]
+    },
+    {
+      "name": "Lab 005 Judge",
+      "slug": "005-judge",
+      "description": "Performs reflected answer and step grading and delegates arithmetic to the scorer workflow.",
+      "instructions_file": "agent_presets/judge.md",
+      "actions": [
+        "core.workflow.execute"
+      ],
+      "retries": 1
+    }
+  ],
+  "workflows": [
+    {
+      "alias": "query_incident_sql",
+      "file": "workflows/query-incident-sql.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "score_secrl",
+      "file": "workflows/score-secrl.yml",
+      "category": "scorer"
+    }
+  ]
+}

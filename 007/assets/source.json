@@ -1,0 +1,8 @@
+{
+  "repository": "https://huggingface.co/datasets/Multilingual-Multimodal-NLP/SEVENLLM-Dataset",
+  "revision": "1de23ce55cadc984d3f3a7b52c4035a68c6cd5b0",
+  "file": "test.jsonl",
+  "sha256": "08a27277386b1f205ed0814d379bb0db9bdce8f39bde099020a1f8044d404d7b",
+  "license": "Apache-2.0",
+  "imported_source_ids": {"first": 1201, "last": 1250, "count": 50}
+}

@@ -1,0 +1,33 @@
+version: 1
+definition:
+  title: __LAB_ID__ Candidate — Modify
+  description: MODIFY THIS. Defines the prompt, budgets, and agent orchestration evaluated by Lab __LAB_ID__.
+  entrypoint:
+    ref: run_candidate
+    expects:
+      case_id:
+        type: str
+        description: Native Tracecat Case ID containing the Candidate's complete unit of work.
+  config:
+    timeout: 3600
+  actions:
+    - ref: run_candidate
+      action: ai.preset_agent
+      retry_policy:
+        max_attempts: 1
+        timeout: 3600
+      args:
+        preset: "__CANDIDATE_PRESET__"
+        user_prompt: >-
+          Investigate Tracecat Case ${{ TRIGGER.case_id }}. The Case is the complete
+          unit of work. Put your visible analysis, evidence, timeline, decision,
+          and final answer in the Case description, tags, or comments. Do not
+          reveal hidden evaluation material. Return one explicit final answer;
+          it will be frozen verbatim at the submission cutoff.
+        max_tool_calls: 24
+        max_requests: 64
+  returns:
+    output: ${{ ACTIONS.run_candidate.result.output }}
+    session_id: ${{ ACTIONS.run_candidate.result.session_id }}
+    duration: ${{ ACTIONS.run_candidate.result.duration }}
+    message_history: ${{ ACTIONS.run_candidate.result.message_history }}

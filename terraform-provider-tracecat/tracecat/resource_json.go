@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -27,6 +28,12 @@ func resourceJSON(endpoint string) *schema.Resource {
 			},
 		},
 	}
+}
+
+func resourceJSONByKey(endpoint, keyField, lookupPath string) *schema.Resource {
+	resource := resourceJSON(endpoint)
+	resource.CreateContext = jsonCreateByKey(endpoint, keyField, lookupPath)
+	return resource
 }
 
 func decodeObject(raw string) (map[string]any, error) {
@@ -97,6 +104,67 @@ func jsonCreate(endpoint string) schema.CreateContextFunc {
 			return diag.Errorf("Tracecat %s create response omitted id", endpoint)
 		}
 		d.SetId(id)
+		return jsonRead(endpoint)(ctx, d, meta)
+	}
+}
+
+func jsonCreateByKey(endpoint, keyField, lookupPath string) schema.CreateContextFunc {
+	return func(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+		c, err := client(meta)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		payload, err := decodeObject(d.Get("config_json").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		key, ok := payload[keyField].(string)
+		if !ok || key == "" {
+			return diag.Errorf("config_json must include a non-empty %q for natural-key reconciliation", keyField)
+		}
+
+		workspaceID := d.Get("workspace_id").(string)
+		lookup := endpoint + lookupPath + url.PathEscape(key)
+		var existing map[string]any
+		status, err := c.JSON(ctx, http.MethodGet, lookup, workspaceID, nil, &existing)
+		if err == nil {
+			id := responseID(existing)
+			if id == "" {
+				return diag.Errorf("Tracecat %s lookup by %s omitted id", endpoint, keyField)
+			}
+			d.SetId(id)
+			if _, err := c.JSON(ctx, http.MethodPatch, endpoint+"/"+id, workspaceID, payload, nil); err != nil {
+				return diag.FromErr(err)
+			}
+			return jsonRead(endpoint)(ctx, d, meta)
+		}
+		if status != http.StatusNotFound {
+			return diag.FromErr(err)
+		}
+
+		var out map[string]any
+		status, err = c.JSON(ctx, http.MethodPost, endpoint, workspaceID, payload, &out)
+		if err != nil {
+			// Another state may have created the shared resource after our lookup.
+			// Resolve that race by key and reconcile the winner.
+			if status != http.StatusConflict {
+				return diag.FromErr(err)
+			}
+			if _, lookupErr := c.JSON(ctx, http.MethodGet, lookup, workspaceID, nil, &existing); lookupErr != nil {
+				return diag.FromErr(err)
+			}
+			out = existing
+		}
+		id := responseID(out)
+		if id == "" {
+			return diag.Errorf("Tracecat %s create response omitted id", endpoint)
+		}
+		d.SetId(id)
+		if status == http.StatusConflict {
+			if _, err := c.JSON(ctx, http.MethodPatch, endpoint+"/"+id, workspaceID, payload, nil); err != nil {
+				return diag.FromErr(err)
+			}
+		}
 		return jsonRead(endpoint)(ctx, d, meta)
 	}
 }
