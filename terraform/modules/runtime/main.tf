@@ -7,6 +7,7 @@ terraform {
 
 locals {
   workflows = {
+    run_trial_batch  = { file = "run-trial-batch.yml" }
     run_candidate    = { file = "run-candidate.yml" }
     candidate_trial  = { file = "candidate-trial.yml" }
     run_evaluation   = { file = "run-evaluation.yml" }

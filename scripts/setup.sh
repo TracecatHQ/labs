@@ -76,8 +76,8 @@ fi
 unset compose_project tracecat_network
 
 # Record old per-lab workspace resources before selecting a workspace. The
-# explicit `just migrate-workspace` command later removes only that resource
-# from local state after verifying that its ID matches the selected workspace.
+# workspace identity is retained, but resources must be rebuilt into the single
+# workspace state. Setup does not delete resources or modify legacy states.
 legacy_workspace_file="$tmp_dir/legacy-workspaces"
 : > "$legacy_workspace_file"
 for terraform_dir in "$root"/[0-9][0-9][0-9]/terraform; do
@@ -406,7 +406,8 @@ set_env JUDGE_MODEL_NAME "$judge_model"
 unset tracecat_password
 printf '\nSetup complete. Terraform API access is in %s (mode 0600); the model credential exists only in Tracecat.\n' "$env_file"
 if [[ -s "$legacy_workspace_file" ]]; then
-  while IFS=$'\t' read -r legacy_lab _; do
-    printf 'Preserve the existing lab resources before planning: just migrate-workspace %s\n' "$legacy_lab"
-  done < "$legacy_workspace_file"
+  printf '%s\n' 'Legacy per-lab Terraform state detected. Resource-preserving migration to the central state is not supported.'
+  printf '%s\n' 'Back up any Labs data you need before rebuilding. Reset deletes Labs cases, runs, and resources; it preserves the workspace and model credentials.'
+  printf '%s\n' 'Do not plan, apply, or destroy the retired per-lab Terraform roots.'
+  printf 'Rebuild explicitly: just reset-workspace CONFIRM_WORKSPACE_ID=%s && just deploy\n' "$(env_value TRACECAT_WORKSPACE_ID)"
 fi

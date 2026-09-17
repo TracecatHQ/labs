@@ -155,7 +155,11 @@ remove brittle alias and envelope instructions while preserving the visible,
 modifiable Candidate workflow as the evaluation's orchestration surface.
 
 Large suites use cursor pagination and bounded batches. Adjust concurrency with
-`BATCH_SIZE=<n>`. To resume a stopped Run Evaluation workflow from its completed Trial
+`BATCH_SIZE=<n>`. Pending trials are partitioned into batches of at most that
+size. The shared `run_trial_batch` workflow runs each batch in parallel, and the
+parent waits for it before starting the next batch. This avoids expression-based
+loop batch sizes, which the pinned Tracecat runtime does not support. Failed
+trials leave incomplete checkpoint coverage; resume retries only unfinished work. To resume a stopped Run Evaluation workflow from its completed Trial
 checkpoints, rerun `just run NNN RUN_ID=<candidate-run-id>`; rerunning
 `just judge` skips Trials with complete criterion coverage.
 

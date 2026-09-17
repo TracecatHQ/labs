@@ -39,6 +39,7 @@ definition:
           requested_run_id: ${{ TRIGGER.evaluation_run_id }}
           new_run_id: ${{ TRIGGER.new_evaluation_run_id }}
           batch_size: ${{ TRIGGER.batch_size }}
+          candidate_workflow_alias: ${{ TRIGGER.candidate_workflow_alias }}
         script: |
           import hashlib
           import json
@@ -61,7 +62,7 @@ definition:
               return rows
 
 
-          def main(requested_case_ids, requested_lab_id, requested_run_id, new_run_id, batch_size):
+          def main(requested_case_ids, requested_lab_id, requested_run_id, new_run_id, batch_size, candidate_workflow_alias):
               if batch_size < 1:
                   raise ValueError("batch_size must be positive")
               if not requested_lab_id:
@@ -125,10 +126,17 @@ definition:
                   for row in all_rows("evaluation_trials")
                   if row.get("evaluation_run_id") == run_id and row.get("status") == "completed"
               }
+              pending = [row for row in templates if row["case_id"] not in completed]
+              batches = [
+                  [{"evaluation_run_id": run_id,
+                    "candidate_workflow_alias": candidate_workflow_alias,
+                    "template": row} for row in pending[start:start + batch_size]]
+                  for start in range(0, len(pending), batch_size)
+              ]
               return {
+                  "batches": batches,
                   "evaluation_run_id": run_id,
                   "templates": templates,
-                  "pending_templates": [row for row in templates if row["case_id"] not in completed],
                   "completed_count": len(completed.intersection(selected_case_ids)),
                   "expected_count": len(templates),
                   "batch_size": batch_size,
@@ -182,20 +190,19 @@ definition:
     - ref: run_candidate_trials
       action: core.workflow.execute
       depends_on: [persist_running_run]
-      for_each: ${{ for var.template in ACTIONS.load_work.result.pending_templates }}
+      for_each: ${{ for var.batch in ACTIONS.load_work.result.batches }}
       retry_policy:
         max_attempts: 1
         timeout: 3600
       args:
-        workflow_alias: candidate_trial
+        workflow_alias: run_trial_batch
         wait_strategy: wait
         fail_strategy: all
-        loop_strategy: batch
-        batch_size: 4
+        loop_strategy: sequential
+        batch_size: 1
         trigger_inputs:
-          evaluation_run_id: ${{ ACTIONS.load_work.result.evaluation_run_id }}
-          candidate_workflow_alias: ${{ TRIGGER.candidate_workflow_alias }}
-          template: ${{ var.template }}
+          workflow_alias: candidate_trial
+          items: ${{ var.batch }}
 
     - ref: finalize_run
       action: core.script.run_python

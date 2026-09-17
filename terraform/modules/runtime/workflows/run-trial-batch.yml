@@ -1,0 +1,27 @@
+version: 1
+definition:
+  title: Run Trial Batch
+  description: Run one bounded batch in parallel; callers wait before starting the next batch and verify durable checkpoint coverage.
+  entrypoint:
+    ref: run_trials
+    expects:
+      workflow_alias:
+        type: str
+      items:
+        type: list[dict]
+  config:
+    timeout: 0
+  actions:
+    - ref: run_trials
+      action: core.workflow.execute
+      for_each: ${{ for var.inputs in TRIGGER.items }}
+      retry_policy:
+        max_attempts: 1
+        timeout: 3600
+      args:
+        workflow_alias: ${{ TRIGGER.workflow_alias }}
+        wait_strategy: wait
+        fail_strategy: isolated
+        loop_strategy: parallel
+        trigger_inputs: ${{ var.inputs }}
+  returns: ${{ ACTIONS.run_trials.result }}
