@@ -1,0 +1,616 @@
+005/tracecat/workflows/score-secrl.yml
+  s_bd663eca5bf4c3::t_cd65f78e343cc2 99
+  s_bd663eca5bf4c3::t_402f2860cc416b 1-8,10-56,64-98,100-107
+  s_bd663eca5bf4c3::t_62e5cb46ffb519 9
+  s_bd663eca5bf4c3::t_43cadc2c311684 57-63
+templates/lab-readme.md
+  s_bd663eca5bf4c3::t_c92223fe6c66bf 12-15,27-30,53
+  s_bd663eca5bf4c3::t_edee8388c6edd6 50-52
+  s_bd663eca5bf4c3::t_4553ba41c1491f 21,38,40-41
+  s_bd663eca5bf4c3::t_f6982608a267a6 49
+003/tracecat/agent_presets/judge.md
+  s_bd663eca5bf4c3::t_a1ab65c090ee2e 3-4,6,24,29-31,33-34,36-37
+002/tracecat/tracecat.json
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 9-15,18
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 6,19
+  s_bd663eca5bf4c3::t_d56392662fc25d 5
+004/README.md
+  s_bd663eca5bf4c3::t_cc766e60a91569 1-28,30-55,57,60-68
+  s_bd663eca5bf4c3::t_b312461a19c4d9 29
+  s_bd663eca5bf4c3::t_4553ba41c1491f 56,58-59
+006/target/sigma_runner/Dockerfile
+  s_bd663eca5bf4c3::t_cd76decb18fe4c 1,9
+  s_bd663eca5bf4c3::t_774e7d813a8a15 3-7,11,13-14,20,22
+  s_bd663eca5bf4c3::t_0dd435db4d3efb 2,8,10,12,15-19,21
+004/target/server.py
+  s_bd663eca5bf4c3::t_66ee2fd1e41cf7 141-150,152-156
+  s_bd663eca5bf4c3::t_ccde64b96b8df2 122,151
+  s_bd663eca5bf4c3::t_b312461a19c4d9 13
+  s_bd663eca5bf4c3::t_cc766e60a91569 1-12,14-121,123-140,157-194
+terraform-provider-tracecat/tracecat/resource_table_row.go
+  s_bd663eca5bf4c3::t_e66503dc4cfd3a 64-84,87-90
+007/tests/test_cases.py
+  s_bd663eca5bf4c3::t_72e91cca3af944 1-20,32-35,37-70,85-88
+  s_bd663eca5bf4c3::t_cf4a0280ca56a1 36
+  s_bd663eca5bf4c3::t_b31f01c7b8e858 74-80,84
+  s_bd663eca5bf4c3::t_57d4a1d692af20 21-31,71-73,81-83
+007/tracecat/workflows/score-mcq-answer.yml
+  s_bd663eca5bf4c3::t_d8168804a93ef6 1-8,10-18,20-34,36-39
+  s_bd663eca5bf4c3::t_afe4cf39ad6ead 9
+  s_bd663eca5bf4c3::t_b31f01c7b8e858 19,35
+006/target/sigma_runner/Cargo.toml
+  s_bd663eca5bf4c3::t_774e7d813a8a15 1-11,13
+  s_bd663eca5bf4c3::t_0c619a1624c6bf 12
+internal/grading/report.go
+  s_bd663eca5bf4c3::t_f4fd12787b8199 572,772-784
+  s_bd663eca5bf4c3::t_2bda57cf8b6795 46-49,52-53,55-56,61-63,65-66,69-72,74-75,77-79,81-82,84-93,95-96,113,127,169-187,189-202,204-205,214,217-221,223-225,227-232,238-240,242-243,245-246,248-251,253-254,257-262,265,271,273,277,279-283,289,294,296,299-300,307,309-332,335,337,339-340,343-344,349-352,354,357-358,364-376,378-386,388-389,391-394,396-397,399-400,402-411,414-419,421-424,426-429,436,440-448,452-454,456-459,461-464,467-470,474,490-503,511-515,518-519,529-542,546-562,564-566,568-570,574,576,581,583,595-597,599,607,610,615,618,620,627-630,639-641,643,648-649,666,669-672,674-684,701,704-716,723,727-728,730,733,739,744-745,753,760,785-786,788,811-812,814
+  s_bd663eca5bf4c3::t_949a32c52fd167 58-59
+  s_bd663eca5bf4c3::t_e0d5bec49c5cea 117-122,124-125
+  s_bd663eca5bf4c3::t_fc49852471b857 215-216
+  s_bd663eca5bf4c3::t_b0d66d6326bae4 108,130-168
+  s_bd663eca5bf4c3::t_f16ace5e244223 480-482,487-489,522
+  s_bd663eca5bf4c3::t_c6ffc3d6408091 98-101,103-107
+  s_bd663eca5bf4c3::t_14da65fafbd071 111-112,476-478
+  s_bd663eca5bf4c3::t_671db289004fdb 355-356,360-362,377,398
+  s_bd663eca5bf4c3::t_89c00bc0120e0c 123,483-485
+  s_bd663eca5bf4c3::t_062118f649dc72 412-413,543-545
+  s_bd663eca5bf4c3::t_a43ba0f6865583 20-27,520-521,523-524,810
+terraform-provider-tracecat/tracecat/resource_organization.go
+  s_bd663eca5bf4c3::t_d8ace14eccda2d 1-31,35-38,42-43,48-52,56,66-67,71-79,83-92,97-98,113-118,128-133,138,144-147,151-153,155,157-158,162-165,202-203,228-229,241-242,256-257,264-266,273-274,277-282,287,293-297,304,333-334,355-358,363,369-376,379-384,389-390,396-400,405-406,437-441,446-447,453-454
+  s_bd663eca5bf4c3::t_421a0d04b2deeb 267-272
+  s_bd663eca5bf4c3::t_784080842edd57 154,156,166-170,172-200,204-223,226,230-239,243-254
+  s_bd663eca5bf4c3::t_a2a11e8854771f 312-327,329-330,335-354
+  s_bd663eca5bf4c3::t_ed9d3cdf6a9d34 32-34,39-41,44-47,53-55,57-65,68-70,80-82,93-96,99-112,119-127,134-137,139-143,148-150,159-161,171,201,224-225,227,240,255,258-263,275-276,283-286,288-292,298-303,305-311,328,331-332,359-362,364-368,377-378,385-388,391-395,401-404,407-436,442-445,448-452
+006/tracecat/workflows/get-event-source-schema.yml
+  s_bd663eca5bf4c3::t_9a9a364942c63f 1-10,12
+  s_bd663eca5bf4c3::t_3bec9463f77424 15
+  s_bd663eca5bf4c3::t_f38a07698ee69e 11,13-14,16
+scripts/tests/test_candidate_reset_gate.py
+  s_bd663eca5bf4c3::t_1c6e3a9f176431 5,7,116-122,124,152-156
+  s_bd663eca5bf4c3::t_2ef146bbddcbfa 123,125-129,151
+  s_bd663eca5bf4c3::t_a168847875bf49 1-4,6,8-115,157-172
+  s_bd663eca5bf4c3::t_19c4cd95c836c7 130-150
+007/README.md
+  s_bd663eca5bf4c3::t_4553ba41c1491f 48,50-51
+  s_bd663eca5bf4c3::t_d8168804a93ef6 1-47,49,52-60
+terraform/modules/runtime/variables.tf
+  s_bd663eca5bf4c3::t_0e79a8400705c5 1-3
+007/compose.yml
+  s_bd663eca5bf4c3::t_d8168804a93ef6 1
+006/scoring.py
+  s_bd663eca5bf4c3::t_2bd9bd6530f3f3 30-36
+  s_bd663eca5bf4c3::t_6e0264dac16466 77-84,91-92,102-103
+  s_bd663eca5bf4c3::t_5108de35861925 1-29,37-76,85-90,93-101,104-134,139,149-169
+  s_bd663eca5bf4c3::t_012c39e2599d01 135-138
+  s_bd663eca5bf4c3::t_d8ba783bdcc05c 140-142,146-148
+  s_8229a027b12dd6::t_794e4231d99488 143-145
+006/evals/cases.ndjson
+  s_bd663eca5bf4c3::t_d031a015fc114f 1-50
+006/licenses/inspect-evals-MIT.txt
+  s_bd663eca5bf4c3::t_d163a91cd5ecfa 1-21
+internal/grading/report_test.go
+  s_bd663eca5bf4c3::t_fa5d5782243388 70-77,79-81,83-85
+  s_bd663eca5bf4c3::t_ab6bb3c6b416ed 107,209,211-216
+  s_bd663eca5bf4c3::t_39a613ceb131d5 205
+  s_bd663eca5bf4c3::t_949a32c52fd167 203
+  s_bd663eca5bf4c3::t_75d7ae96e7f4f7 105-106,109
+  s_bd663eca5bf4c3::t_35487bd3533fb0 146-149
+  s_bd663eca5bf4c3::t_b6d9671f58e5e3 152-153,155-159,162-166,171-172
+  s_bd663eca5bf4c3::t_9e7d24db4c94fc 154
+  s_bd663eca5bf4c3::t_15794653991cea 108
+  s_bd663eca5bf4c3::t_d7ceb7d75316d1 26
+  s_bd663eca5bf4c3::t_ac44609fd7cedd 137-142
+  s_bd663eca5bf4c3::t_863315b971a8c8 13-14,17-21,23,27-30,34-48,52,56-59,63-66,88-96,99-102,112-113,117-118,121-124,128-132,134,176-180,184-187,191-199,201-202,204,206-208,210,217-220,222-231,233
+004/tracecat/workflows/score-threat-hunt.yml
+  s_bd663eca5bf4c3::t_afe4cf39ad6ead 9
+  s_bd663eca5bf4c3::t_c5661eb0ec146b 1-8,10-121
+002/tracecat/agent_presets/judge.md
+  s_bd663eca5bf4c3::t_8c1ea1628eef4a 3-4,6-7,13,16,20-25
+scripts/ensure-service-account-scopes.sh
+  s_bd663eca5bf4c3::t_f0687847df38d8 1-38
+scripts/candidate-reset-gate.py
+  s_bd663eca5bf4c3::t_a168847875bf49 1-53,58,60-130
+  s_bd663eca5bf4c3::t_4083b721c6c1a2 55-57,59
+  s_bd663eca5bf4c3::t_2ef146bbddcbfa 54
+terraform-provider-tracecat/tracecat/resource_table.go
+  s_bd663eca5bf4c3::t_0f6517114fc44b 30,56-61,69,71,75,79,88-129,133,152-160,164-180,238,288-293
+  s_bd663eca5bf4c3::t_ed4ae34c2151d0 207-215,223-237
+  s_bd663eca5bf4c3::t_3ef3584a11d7e3 62,67,283-287
+  s_bd663eca5bf4c3::t_8060b2fdefba04 8,10,63-66,68,80-81,161-163,206,216,294-296
+  s_bd663eca5bf4c3::t_ccc34c185dc0d2 130-132,134-151
+  s_bd663eca5bf4c3::t_88846f23211f44 181
+  s_bd663eca5bf4c3::t_98521f935914cc 239
+README.md
+  s_bd663eca5bf4c3::t_49fafebff29f8b 86,94-103,115,132-133
+  s_bd663eca5bf4c3::t_edee8388c6edd6 116,118-120,135,138-140,142-145
+  s_bd663eca5bf4c3::t_c6e14330d8cfbf 22-34,37-58
+  s_bd663eca5bf4c3::t_06fd83edd4d54f 162-165
+  s_bd663eca5bf4c3::t_7d0ff948cd80ad 63-64,80-82
+  s_bd663eca5bf4c3::t_f6982608a267a6 117,136-137,141
+  s_bd663eca5bf4c3::t_4f9de1370c488b 14,35-36,104-114,126-129
+  s_bd663eca5bf4c3::t_618ddb1b03a4bf 134
+005/tracecat/agent_presets/candidate.md
+  s_bd663eca5bf4c3::t_08a4b5e4a96c40 13-16
+  s_bd663eca5bf4c3::t_8392d93969a041 3-5,7-12,17-25
+  s_bd663eca5bf4c3::t_39ec6efb098e44 1-2,6
+004/tracecat/workflows/query-threat-logs.yml
+  s_bd663eca5bf4c3::t_cc766e60a91569 1-14,19
+  s_bd663eca5bf4c3::t_66ee2fd1e41cf7 15-18
+004/assets/log_schema.json
+  s_bd663eca5bf4c3::t_7b2fdc4f951b26 1-523
+006/.gitignore
+  s_bd663eca5bf4c3::t_416c2f1a69d1ff 1-2,4-6
+  s_bd663eca5bf4c3::t_35da3b5b69fcc3 3
+005/scripts/acquire_data.sh
+  s_bd663eca5bf4c3::t_54b7fe66321510 1-24
+terraform-provider-tracecat/tracecat/provider.go
+  s_bd663eca5bf4c3::t_dd155d8535fd7c 32-33
+  s_bd663eca5bf4c3::t_ed9d3cdf6a9d34 27-31,35-41
+  s_bd663eca5bf4c3::t_d8ace14eccda2d 34
+terraform/modules/runtime/workflows/run-evaluation.yml
+  s_bd663eca5bf4c3::t_06e47724f43944 1-15,17-249
+  s_bd663eca5bf4c3::t_a0bb3ff7210c3a 16
+005/tests/test_scoring.py
+  s_bd663eca5bf4c3::t_da5c51b5abf207 2-3,5-11
+  s_bd663eca5bf4c3::t_ca0ab6fab67165 12,27-30
+  s_bd663eca5bf4c3::t_39ec6efb098e44 1,4,13-26,31-34
+terraform/workspace/variables.tf
+  s_bd663eca5bf4c3::t_54b769ac7420fb 1-2,4-6,8-9
+  s_bd663eca5bf4c3::t_fb2aa2fba29080 10-21
+  s_bd663eca5bf4c3::t_15009d9a95e036 3,7
+terraform/modules/runtime/workflows/run-candidate.yml
+  s_bd663eca5bf4c3::t_06e47724f43944 1-26
+006/README.md
+  s_bd663eca5bf4c3::t_3753ed4136c05b 85-87
+  s_bd663eca5bf4c3::t_288da13cc79359 88-89
+  s_bd663eca5bf4c3::t_b4bae159ca782e 2,8,21,31,43,45-51,57-58,61,66,73-76,79,83-84,90-96,98
+  s_bd663eca5bf4c3::t_b28da11641387a 9-10,13-15,22-23,32-33,44,59-60
+  s_bd663eca5bf4c3::t_c660e72dac414d 1,3-7,11-12,16-20,24-25,30,34-42
+  s_bd663eca5bf4c3::t_e86e1c18b59197 62-65,67-71,77-78,97
+  s_bd663eca5bf4c3::t_32472fea9f43ba 80-82
+  s_bd663eca5bf4c3::t_4553ba41c1491f 53,55-56
+  s_bd663eca5bf4c3::t_6e0264dac16466 26-29
+  s_bd663eca5bf4c3::t_e503437c141bbe 52,54
+  s_bd663eca5bf4c3::t_ab4814124f2081 72
+terraform/modules/lab/main.tf
+  s_bd663eca5bf4c3::t_09b3dacc663308 144,151
+  s_bd663eca5bf4c3::t_0df6b282431813 162-165
+  s_bd663eca5bf4c3::t_f0888e41491bb6 9-10,15,18-19,24,27-28,39,79,81,83,86-88,94,108,118,123-126,128,134,136-137,141,143,148,150,155,157-159,161,169,171-172,176,178-179
+  s_bd663eca5bf4c3::t_224282f45be9cb 160
+  s_bd663eca5bf4c3::t_2120d3d3aece11 4,11,14,16,20,22,25-26,29-38,40,47,53-55,57-62,64-68,70-73,82,89,116-117,119-122,127,129-133,135,138-140,142,145-147,149,152-154,156,166-168,170,173-175,177,180
+  s_bd663eca5bf4c3::t_86979bfa018a33 48-52,56
+cmd/labs-grade/main.go
+  s_bd663eca5bf4c3::t_94e626fd6b9db1 34
+  s_bd663eca5bf4c3::t_05d3683c03eca5 56
+003/tracecat/tracecat.json
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 20-24,27,31-33,38-39,42-44,47
+  s_bd663eca5bf4c3::t_d56392662fc25d 16
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 17,28
+  s_bd663eca5bf4c3::t_cefcbafe1abbcc 40-41,45-46
+003/README.md
+  s_bd663eca5bf4c3::t_4553ba41c1491f 69,71-72
+  s_bd663eca5bf4c3::t_f6982608a267a6 80
+004/target/Dockerfile
+  s_bd663eca5bf4c3::t_cc766e60a91569 2-3,6-10
+  s_bd663eca5bf4c3::t_b312461a19c4d9 4-5
+  s_bd663eca5bf4c3::t_77af4eb9ea8380 1
+004/evals/cases.ndjson
+  s_bd663eca5bf4c3::t_208a3d9649ff41 1
+002/README.md
+  s_bd663eca5bf4c3::t_4553ba41c1491f 41,43-44
+004/.gitattributes
+  s_bd663eca5bf4c3::t_c2e85a287227a2 1
+006/scripts/acquire_data.sh
+  s_bd663eca5bf4c3::t_b4bae159ca782e 1-34
+006/tracecat/workflows/execute-sigma-rule.yml
+  s_bd663eca5bf4c3::t_f38a07698ee69e 14,16-17,19-23
+  s_bd663eca5bf4c3::t_9a9a364942c63f 1-9,11-13,15
+  s_bd663eca5bf4c3::t_1bb5b41972a2be 10
+  s_bd663eca5bf4c3::t_3bec9463f77424 18
+internal/grading/client_test.go
+  s_bd663eca5bf4c3::t_ba4217bc793f4a 122-123,129-130,135-138,163-164
+  s_bd663eca5bf4c3::t_72f48ced14e766 21,131-132,155
+  s_bd663eca5bf4c3::t_94e626fd6b9db1 27
+  s_bd663eca5bf4c3::t_39a613ceb131d5 142
+007/scripts/import_cases.py
+  s_bd663eca5bf4c3::t_e0bc7f4fe9dc7c 76-79
+  s_bd663eca5bf4c3::t_d8168804a93ef6 1-75,80-95
+005/evals/cases.ndjson
+  s_bd663eca5bf4c3::t_7c48e2e57f9d3f 1-589
+005/tracecat/agent_presets/judge.md
+  s_bd663eca5bf4c3::t_7f3e66531197cf 7-18
+  s_bd663eca5bf4c3::t_39ec6efb098e44 1-6,19-20
+terraform/modules/lab/outputs.tf
+  s_bd663eca5bf4c3::t_2120d3d3aece11 9-10
+004/compose.yml
+  s_bd663eca5bf4c3::t_cc766e60a91569 1-26
+Justfile
+  s_bd663eca5bf4c3::t_c8830fcd6d54cd 178,306,308-309
+  s_bd663eca5bf4c3::t_aa5fe4b564c014 303,321,324-325,328-329,379-380,395
+  s_bd663eca5bf4c3::t_5a190212660a0b 312,322
+  s_bd663eca5bf4c3::t_ba95fa008f194d 319-320
+  s_bd663eca5bf4c3::t_3614ee0f4ccdc4 332-333,347-348,363
+  s_bd663eca5bf4c3::t_49bace0fbf29e7 361,365
+  s_bd663eca5bf4c3::t_5a0bfa28a302f2 24-27,109-111,114-116,119,151-152,157-158,166-168
+  s_bd663eca5bf4c3::t_8658987178710c 169
+  s_bd663eca5bf4c3::t_03a3ae35a50580 174,181-185,208-209,216-219,279
+  s_bd663eca5bf4c3::t_f955ba87004860 128,130
+  s_bd663eca5bf4c3::t_ccde64b96b8df2 79-83,93-98
+  s_bd663eca5bf4c3::t_81df39d104e875 300
+  s_bd663eca5bf4c3::t_300a34908c379f 313-318,323,326-327,330-331,334-335,337-346,349,352-359,362,364,366-372
+  s_bd663eca5bf4c3::t_71c698b4ea90d2 106,154-155,171
+  s_bd663eca5bf4c3::t_65a655d9ec43cf 127,129,131,133-149
+  s_bd663eca5bf4c3::t_c9196f566bfa02 202-206,243,249-250,253-274,280-287
+  s_bd663eca5bf4c3::t_7e796a9820b7a1 381-394
+  s_bd663eca5bf4c3::t_f6982608a267a6 173
+  s_bd663eca5bf4c3::t_f0687847df38d8 163,170
+  s_bd663eca5bf4c3::t_01c0caa01209fd 177,200,212-213,235,247-248
+  s_bd663eca5bf4c3::t_4049ce66005b2a 161-162,164
+  s_bd663eca5bf4c3::t_7d0ff948cd80ad 50,59
+  s_bd663eca5bf4c3::t_8b4f20fef8132b 84
+  s_bd663eca5bf4c3::t_2ef146bbddcbfa 132
+  s_bd663eca5bf4c3::t_f52f11f8d51674 172
+002/evals/rubric.json
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 8
+  s_bd663eca5bf4c3::t_93949a87534c80 2-4,14,17-18,23,26-27,32,35-39
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 5-7,9,40-58
+005/licenses/CDLA-Permissive-2.0.txt
+  s_bd663eca5bf4c3::t_33ae30fb4e5f92 1-35
+006/tracecat/tracecat.json
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 7,19
+  s_bd663eca5bf4c3::t_416c2f1a69d1ff 1-4,25-26,77-78
+  s_bd663eca5bf4c3::t_cefcbafe1abbcc 29-30,34-35,39-40,44-45,49-50,54-55,59-60,64-65,69-70,74-75
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 5,8-18,20-24,27-28,31-33,36-38,41-43,46-48,51-53,56-58,61-63,66-68,71-73,76
+  s_bd663eca5bf4c3::t_d56392662fc25d 6
+004/tests/test_target.py
+  s_bd663eca5bf4c3::t_3e59c95307149b 1-44
+004/.dockerignore
+  s_bd663eca5bf4c3::t_c2e85a287227a2 1-10
+006/tests/test_scoring.py
+  s_bd663eca5bf4c3::t_73c3bfbf8ac4f7 109-111,119,124,132
+  s_bd663eca5bf4c3::t_22ca36251f4999 134-135
+  s_bd663eca5bf4c3::t_ccbf25945af43e 1-3,5-15,24-47,49-54,59-74,76-93,145-148
+  s_bd663eca5bf4c3::t_96e2f2a620ba17 4,16-23,94-108,112-118,120-123,125-131,133,136-144
+  s_bd663eca5bf4c3::t_6e0264dac16466 48,55-58
+  s_bd663eca5bf4c3::t_2bd9bd6530f3f3 75
+004/tracecat/agent_presets/candidate.md
+  s_bd663eca5bf4c3::t_d9516652030b91 4-14
+  s_bd663eca5bf4c3::t_cc766e60a91569 1-3,15-26
+004/tracecat/tracecat.json
+  s_bd663eca5bf4c3::t_d56392662fc25d 5
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 6
+  s_bd663eca5bf4c3::t_cc766e60a91569 1-4,7-8,15-17,28-29
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 9-14,18-19,22-24,27
+  s_bd663eca5bf4c3::t_cefcbafe1abbcc 20-21,25-26
+003/evals/rubric.json
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 8
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 5-7,9,11-109
+  s_bd663eca5bf4c3::t_4513155814f035 2-4,110-111
+007/evals/cases.ndjson
+  s_bd663eca5bf4c3::t_d77e263bb0fa75 1-50
+005/licenses/SecRL-MIT.txt
+  s_bd663eca5bf4c3::t_54b7fe66321510 1-21
+007/tracecat/tracecat.json
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 9-11,15-16,19
+  s_bd663eca5bf4c3::t_d56392662fc25d 5
+  s_bd663eca5bf4c3::t_cefcbafe1abbcc 17-18
+  s_bd663eca5bf4c3::t_d8168804a93ef6 1-4,7-8,12-14,20-21
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 6
+005/scoring.py
+  s_bd663eca5bf4c3::t_39ec6efb098e44 1-3,8-11,13-26
+  s_bd663eca5bf4c3::t_ca0ab6fab67165 4-7
+  s_bd663eca5bf4c3::t_6905c5f9569a16 12
+004/evals/scorer.py
+  s_bd663eca5bf4c3::t_cc766e60a91569 1-96
+004/assets/LICENSE
+  s_bd663eca5bf4c3::t_7b2fdc4f951b26 1-21
+terraform/modules/runtime/workflows/candidate-trial.yml
+  s_bd663eca5bf4c3::t_06e47724f43944 10,37,41-42
+  s_bd663eca5bf4c3::t_dfcb468ec0833a 3-4,6,8-9,11-13,15,17,20-23,25-27,30,32,44,46,48-49,51,53,55,59-112,114,117-118,121-122,124-131,133-134,137-152,154,156,158,160-168,171
+004/evals/rubric.json
+  s_bd663eca5bf4c3::t_66ee2fd1e41cf7 1-36
+terraform/workspace/main.tf
+  s_bd663eca5bf4c3::t_f0888e41491bb6 49-50,55,59,61,65,67-68,72,74-75,79,81-82,86,88,92-93,95,99-103,105-109,111,113,115
+  s_bd663eca5bf4c3::t_09b3dacc663308 20,32-35,40-47,117-119
+  s_bd663eca5bf4c3::t_b1caa200be8171 21,23-31
+  s_bd663eca5bf4c3::t_54b769ac7420fb 1-19,36-39,48,51-54,56-58,60,62-64,66,69-71,73,76-78,80,83-85,87,89-91,94,96-98,104,110,112,114,116,120
+  s_bd663eca5bf4c3::t_4f9de1370c488b 22
+006/tracecat/agent_presets/candidate.md
+  s_bd663eca5bf4c3::t_eb1c1275d5eac3 23,27
+  s_bd663eca5bf4c3::t_fe3ac58de2c712 30-34
+  s_bd663eca5bf4c3::t_416c2f1a69d1ff 1-2,8,18
+  s_bd663eca5bf4c3::t_6e0264dac16466 24-26
+  s_bd663eca5bf4c3::t_9a9a364942c63f 19-22
+  s_bd663eca5bf4c3::t_f5eaec9a7ea253 3-7,9-17,28-29
+005/tracecat/tracecat.json
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 7,18
+  s_bd663eca5bf4c3::t_d56392662fc25d 6
+  s_bd663eca5bf4c3::t_cefcbafe1abbcc 30-31,35-36
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 10-14,17,21-23,28-29,32-34,37
+  s_bd663eca5bf4c3::t_39ec6efb098e44 1-5,8-9,15-16,19-20,24-27,38-39
+terraform/modules/lab/workflows/lab-run-evaluation.yml
+  s_bd663eca5bf4c3::t_9f30291e16db95 6,23,40
+  s_bd663eca5bf4c3::t_9207ee02d6191a 1-2,5,7-22,24-28,30-34,36-39
+  s_bd663eca5bf4c3::t_86979bfa018a33 3-4,29,35
+scripts/reset-workspace.py
+  s_bd663eca5bf4c3::t_09b3dacc663308 127-128
+  s_bd663eca5bf4c3::t_4f9de1370c488b 22
+  s_bd663eca5bf4c3::t_c660964a555a33 1-21,23-92,100-114,118-126,129-141
+  s_bd663eca5bf4c3::t_254646ab2acfa2 93-99,115-117
+001/tracecat/tracecat.json
+  s_bd663eca5bf4c3::t_d56392662fc25d 20
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 24-32,35
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 21,36
+terraform/modules/runtime/workflows/score-with-judge.yml
+  s_bd663eca5bf4c3::t_06e47724f43944 14,19-29,31-33
+  s_bd663eca5bf4c3::t_dfcb468ec0833a 1-13,15-18,30,34-46
+CONTRIBUTING.md
+  s_bd663eca5bf4c3::t_0ea061a89e50f4 193-195,201-202
+  s_bd663eca5bf4c3::t_4553ba41c1491f 296,298-299
+  s_bd663eca5bf4c3::t_07d048449776ec 85,97-100,102-112
+  s_bd663eca5bf4c3::t_9de00e06ef287f 179,186
+  s_bd663eca5bf4c3::t_acf0fb6c6a550b 4-8,24,27-32,42,49-50,62,65-66,68-70
+  s_bd663eca5bf4c3::t_f6982608a267a6 96,101,241,307,314
+  s_bd663eca5bf4c3::t_83f8eaa8ed7ea7 114-116,120-126,131,134-135,138-140,145-162
+  s_bd663eca5bf4c3::t_4f9de1370c488b 17-20,166-172,203-209
+  s_bd663eca5bf4c3::t_a5aadf8a703303 231-235
+  s_bd663eca5bf4c3::t_9152afb5614066 239-240,242-248,251,254-255,264-265,268-271
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 15-16,180,187
+  s_bd663eca5bf4c3::t_df99d7c5795a69 113
+005/compose.yml
+  s_bd663eca5bf4c3::t_73c120a1d58a7f 21,27,33,39,45,51,57,63
+  s_bd663eca5bf4c3::t_8b4f20fef8132b 2
+  s_bd663eca5bf4c3::t_b84fe218afe396 1,3-20,22-26,28-32,34-38,40-44,46-50,52-56,58-62,64-79
+terraform-provider-tracecat/tracecat/resource_table_row_test.go
+  s_bd663eca5bf4c3::t_e66503dc4cfd3a 1-35,39-48
+  s_bd663eca5bf4c3::t_d71fcd885348b2 36-38
+006/tracecat/workflows/list-event-sources.yml
+  s_bd663eca5bf4c3::t_9a9a364942c63f 1-7,9
+  s_bd663eca5bf4c3::t_f38a07698ee69e 8,10-11,13
+  s_bd663eca5bf4c3::t_3bec9463f77424 12
+004/assets/source.json
+  s_bd663eca5bf4c3::t_57d4a1d692af20 1-11
+terraform/modules/runtime/workflows/scoring-trial.yml
+  s_bd663eca5bf4c3::t_dfcb468ec0833a 1-203
+005/scripts/import_cases.py
+  s_bd663eca5bf4c3::t_b0a442b8cb09ca 37,53
+  s_bd663eca5bf4c3::t_39ec6efb098e44 1-36,38-52,54,60-70
+  s_bd663eca5bf4c3::t_e908848ff8f41e 55-59
+001/tracecat/agent_presets/judge.md
+  s_bd663eca5bf4c3::t_8c1ea1628eef4a 4-5,8-10,12-13
+terraform-provider-tracecat/tracecat/resource_json_test.go
+  s_bd663eca5bf4c3::t_99234aa1bcec2a 1-56
+006/scripts/import_cases.py
+  s_bd663eca5bf4c3::t_416c2f1a69d1ff 1-43,48-57
+  s_bd663eca5bf4c3::t_4922c8bf6421a4 46-47
+  s_bd663eca5bf4c3::t_efa583d07b5f68 45
+  s_bd663eca5bf4c3::t_ccbf25945af43e 44
+scripts/bootstrap-splunk-mcp.sh
+  s_bd663eca5bf4c3::t_16635980ee1471 25
+  s_bd663eca5bf4c3::t_b3271d255024b1 31-42,44,46
+  s_bd663eca5bf4c3::t_a27406cbcc42a1 43,49
+  s_bd663eca5bf4c3::t_8658987178710c 1-24,26-30,45,47-48,50-83
+terraform-provider-tracecat/tracecat/resource_table_test.go
+  s_bd663eca5bf4c3::t_ed4ae34c2151d0 53,64-66
+  s_bd663eca5bf4c3::t_99234aa1bcec2a 5,50,87-128
+  s_bd663eca5bf4c3::t_874bd94f848be7 51-52,54-63,67-86,129
+  s_bd663eca5bf4c3::t_44a096fa035428 6
+006/tracecat/workflows/scratch-analysis.yml
+  s_bd663eca5bf4c3::t_1bb5b41972a2be 8
+  s_bd663eca5bf4c3::t_2ab65203897a01 1-7,12-29
+  s_bd663eca5bf4c3::t_41eb6dd9c1ee19 9,11
+  s_bd663eca5bf4c3::t_62e5cb46ffb519 10
+004/assets/README.md
+  s_bd663eca5bf4c3::t_c2e85a287227a2 3,8-13,16
+  s_bd663eca5bf4c3::t_b312461a19c4d9 7,17-18
+  s_bd663eca5bf4c3::t_66ee2fd1e41cf7 1-2,4-6,14-15
+terraform/modules/runtime/outputs.tf
+  s_bd663eca5bf4c3::t_0e79a8400705c5 1-7
+006/tracecat/workflows/search-sigma-rules.yml
+  s_bd663eca5bf4c3::t_1bb5b41972a2be 4,11
+  s_bd663eca5bf4c3::t_2ab65203897a01 1-3,5-10,12-31
+006/tracecat/workflows/search-mitre-techniques.yml
+  s_bd663eca5bf4c3::t_1bb5b41972a2be 4,10-11
+  s_bd663eca5bf4c3::t_2ab65203897a01 1-3,5-9,12-35
+005/README.md
+  s_bd663eca5bf4c3::t_b28da11641387a 7-13,21-22,30-31,33-35,37-38,51-52
+  s_bd663eca5bf4c3::t_4553ba41c1491f 45,47-48
+  s_bd663eca5bf4c3::t_288da13cc79359 61-62
+  s_bd663eca5bf4c3::t_e503437c141bbe 44,46
+  s_bd663eca5bf4c3::t_d4e91f6a0f5746 14-19
+  s_bd663eca5bf4c3::t_b84fe218afe396 1-6,20,23-29,32,36,39-43,49-50,53-59,63-80
+  s_bd663eca5bf4c3::t_86ac16cbf0f93e 60
+004/assets/NOTICE
+  s_bd663eca5bf4c3::t_7b2fdc4f951b26 1-10
+005/evals/rubric.json
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 27-30,35-51
+  s_bd663eca5bf4c3::t_39ec6efb098e44 1-7,9-23,25-26,31-34,52-53
+  s_bd663eca5bf4c3::t_41eb6dd9c1ee19 24
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 8
+001/evals/rubric.json
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 8
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 5-7,9,11-163
+  s_bd663eca5bf4c3::t_223a9b4a877022 2-4,164-165
+006/tracecat/workflows/search-cti-reports.yml
+  s_bd663eca5bf4c3::t_2ab65203897a01 1-3,5-7,9,11-31
+  s_bd663eca5bf4c3::t_1bb5b41972a2be 4,8,10
+006/compose.yml
+  s_bd663eca5bf4c3::t_9a9a364942c63f 2-5,9,11-12,14-17,23
+  s_bd663eca5bf4c3::t_b4bae159ca782e 1,6-8,10,18-19,21,24-33
+  s_bd663eca5bf4c3::t_8b4f20fef8132b 20,22
+  s_bd663eca5bf4c3::t_eea9d6e1cbefa2 13
+006/tracecat/agent_presets/judge.md
+  s_bd663eca5bf4c3::t_416c2f1a69d1ff 1-4
+  s_bd663eca5bf4c3::t_2275116b83f6a6 5-46
+terraform/modules/lab/workflows/lab-judge.yml
+  s_bd663eca5bf4c3::t_37b54a5fe88775 3
+  s_bd663eca5bf4c3::t_ddf12d9abdc70a 30
+  s_bd663eca5bf4c3::t_4af6d387c626b7 1-2,4-29,31-32
+terraform/modules/lab/variables.tf
+  s_bd663eca5bf4c3::t_2120d3d3aece11 1-7,9-10
+  s_bd663eca5bf4c3::t_09b3dacc663308 8
+terraform/workspace/outputs.tf
+  s_bd663eca5bf4c3::t_54b769ac7420fb 1-5
+005/.gitignore
+  s_bd663eca5bf4c3::t_54b7fe66321510 1-5
+terraform-provider-tracecat/tracecat/resource_json.go
+  s_bd663eca5bf4c3::t_2b0fc8f79db1e6 8,33-38,111-167,170
+  s_bd663eca5bf4c3::t_2fb8842ab24886 168-169,171
+006/tracecat/workflows/score-cti-realm.yml
+  s_bd663eca5bf4c3::t_6e0264dac16466 127-128,130,134,196
+  s_bd663eca5bf4c3::t_73c3bfbf8ac4f7 31,101,122,172,174-175,194
+  s_bd663eca5bf4c3::t_2bd9bd6530f3f3 83-88
+  s_bd663eca5bf4c3::t_0556f8484f2b37 1-30,32-82,89-100,102-106,108-121,123-126,129,131-133,135-171,173,176-193,195,197-212
+  s_bd663eca5bf4c3::t_61b94f24dcce48 107
+007/assets/source.json
+  s_bd663eca5bf4c3::t_72e91cca3af944 1-8
+terraform-provider-tracecat/tracecat/resource_workflow_test.go
+  s_bd663eca5bf4c3::t_780233b6ac646e 196,255,274,317-319,338-340
+  s_bd663eca5bf4c3::t_0cf523e4a6898b 119,128
+  s_bd663eca5bf4c3::t_05f2bb0df1d26c 157-189
+  s_bd663eca5bf4c3::t_7ece0991878cfd 5,131,200,235-236,251-254,256-273,275-316,320-321,324-333,335-337,341-419,421-422,424
+  s_bd663eca5bf4c3::t_3ec0cf7d81eae9 322-323
+  s_bd663eca5bf4c3::t_e22b3221cc3c2a 12,105-118,120
+  s_bd663eca5bf4c3::t_e8cfdc8319556d 133-156
+  s_bd663eca5bf4c3::t_601d541ecf8168 62,124
+  s_bd663eca5bf4c3::t_99234aa1bcec2a 197-199,201-234,237-250,334,420
+  s_bd663eca5bf4c3::t_af439f0d92caed 33-41,57-61,63-104,121-123,125-127,129
+  s_bd663eca5bf4c3::t_1dc6ed2bc5e924 130,423,425-444
+  s_bd663eca5bf4c3::t_f0f1a17d5c2bbc 132
+006/evals/rubric.json
+  s_bd663eca5bf4c3::t_478d3dec99f1e0 8
+  s_bd663eca5bf4c3::t_5108de35861925 1-4,10,98-99,137-138
+  s_bd663eca5bf4c3::t_177d8779ac2bf2 5-7,9,11-97,100-136
+007/assets/LICENSE
+  s_bd663eca5bf4c3::t_9f614a9e16ceff 1-202
+006/tracecat/workflows/sample-event-source.yml
+  s_bd663eca5bf4c3::t_3bec9463f77424 14,16-18
+  s_bd663eca5bf4c3::t_9a9a364942c63f 1-8,10-11,13
+  s_bd663eca5bf4c3::t_f38a07698ee69e 12,15,19
+  s_bd663eca5bf4c3::t_1bb5b41972a2be 9
+004/tests/test_scorer.py
+  s_bd663eca5bf4c3::t_57d4a1d692af20 20-30,40,69-82
+  s_bd663eca5bf4c3::t_cf4a0280ca56a1 35
+  s_bd663eca5bf4c3::t_4992c84ecf1ef3 17-19
+  s_bd663eca5bf4c3::t_21cd9dbb0e3376 31-34
+  s_bd663eca5bf4c3::t_8aaa203be52010 36-39
+  s_bd663eca5bf4c3::t_569276ef617d9a 41-43,66-68
+  s_bd663eca5bf4c3::t_45ff2f0b819f37 83-85
+  s_f34827139f20fc::t_1e5ecc9068ca8c 1-16,44-65,86
+006/target/sigma_runner/src/main.rs
+  s_bd663eca5bf4c3::t_35da3b5b69fcc3 12-13,398-411,413,417
+  s_bd663eca5bf4c3::t_774e7d813a8a15 1-11,14-21,26-32,37-49,54-56,61-63,68-70,75-90,94-155,161-168,172-175,179,195-200,206-256,260-273,277-278,282-289,294,298-353,358-362,366-371,375,382,387-395,412,418-435,438-441,446-463,466-472,480-497,507-508
+  s_bd663eca5bf4c3::t_20d4d3ab3d4b8a 383-386
+  s_bd663eca5bf4c3::t_b2ef11913ac656 22-25,33-36,50-53,57-60,64-67,71-74,91-93,156-160,169-171,176-178,180-194,201-205,257-259,274-276,279-281,290-293,295-297,354-357,363-365,372-374,376-381,396-397,414-416,436-437,442-445,464-465,473-479,498-502
+  s_bd663eca5bf4c3::t_34e9afbed89ac8 503-506
+terraform/modules/lab/workflows/lab-candidate.yml
+  s_bd663eca5bf4c3::t_86979bfa018a33 3-4,8,10,12,15,18,20-33
+  s_bd663eca5bf4c3::t_4af6d387c626b7 1-2,5-7,9,11,13-14,16-17,19
+006/tracecat/workflows/validate-sigma-rule.yml
+  s_bd663eca5bf4c3::t_9a9a364942c63f 1-11,13
+  s_bd663eca5bf4c3::t_f38a07698ee69e 12,14-15,17-19
+  s_bd663eca5bf4c3::t_3bec9463f77424 16
+internal/grading/types.go
+  s_bd663eca5bf4c3::t_1192fc53537731 337-339
+  s_bd663eca5bf4c3::t_a6e1f994e2560e 121-131,270
+  s_bd663eca5bf4c3::t_f4fd12787b8199 321
+  s_bd663eca5bf4c3::t_c5339ada14a8ee 115-118
+  s_bd663eca5bf4c3::t_52cf15d005f3c3 275
+  s_bd663eca5bf4c3::t_0aa97d45ddea75 12,14-24,58-61,64-66,69-77,80-85,88-94,97-100,112-114,132-134,136-146,150-155,158-193,197-243,269,272-273,293-296,317-320,322,325-327,330-336,340-342,347-362
+  s_bd663eca5bf4c3::t_949a32c52fd167 156-157
+004/scripts/import_sample.py
+  s_bd663eca5bf4c3::t_66ee2fd1e41cf7 1-19,22,33-56,63-67
+  s_bd663eca5bf4c3::t_e0bc7f4fe9dc7c 27-29,31
+  s_bd663eca5bf4c3::t_d163a91cd5ecfa 20-21,57-62
+  s_bd663eca5bf4c3::t_afe4cf39ad6ead 23-26,30,32
+007/assets/README.md
+  s_bd663eca5bf4c3::t_d8168804a93ef6 1-14
+007/tracecat/agent_presets/candidate.md
+  s_bd663eca5bf4c3::t_d8168804a93ef6 1-6
+007/evals/scorer.py
+  s_bd663eca5bf4c3::t_d8168804a93ef6 1-12
+005/scripts/prepare_mysql.py
+  s_bd663eca5bf4c3::t_54b7fe66321510 1-84
+terraform/modules/runtime/workflows/judge-run.yml
+  s_bd663eca5bf4c3::t_ddf12d9abdc70a 11-13,128,193
+  s_bd663eca5bf4c3::t_dfcb468ec0833a 4,6,14-17,19,21-22,24-112,114-115,117-118,120,122-124,127,129,131-133,135-136,138-189,194-198
+  s_bd663eca5bf4c3::t_9f30291e16db95 10
+007/evals/rubric.json
+  s_bd663eca5bf4c3::t_d8168804a93ef6 1-23
+terraform-provider-tracecat/go.mod
+  s_bd663eca5bf4c3::t_fc8907d76612a8 8
+  s_bd663eca5bf4c3::t_f79cf628637d1d 6
+  s_bd663eca5bf4c3::t_0419f0a7420889 5,7,9
+terraform/modules/runtime/main.tf
+  s_bd663eca5bf4c3::t_f0888e41491bb6 134,136,141-145,154,156-157,161,163-164
+  s_bd663eca5bf4c3::t_224282f45be9cb 146
+  s_bd663eca5bf4c3::t_06e47724f43944 10-15
+  s_bd663eca5bf4c3::t_dfcb468ec0833a 1-9,16-133,135,137-140,151-153,155,158-160,162,165
+  s_bd663eca5bf4c3::t_0df6b282431813 147-150
+scripts/setup.sh
+  s_bd663eca5bf4c3::t_f0687847df38d8 305-306
+005/tracecat/workflows/query-incident-sql.yml
+  s_bd663eca5bf4c3::t_54b7fe66321510 1-7,11-20,26-27,29-33,35-54,62-64,66-78
+  s_bd663eca5bf4c3::t_8b4f20fef8132b 8-10,21-25,28,34,55-61,65
+001/README.md
+  s_bd663eca5bf4c3::t_8658987178710c 25-28,44-45
+  s_bd663eca5bf4c3::t_4553ba41c1491f 43
+internal/grading/client.go
+  s_bd663eca5bf4c3::t_94e626fd6b9db1 34-35
+  s_bd663eca5bf4c3::t_52cf15d005f3c3 229,232,235,238-244,248
+  s_bd663eca5bf4c3::t_f59a04766da447 56,193-196,217-219,247
+  s_bd663eca5bf4c3::t_62f60e372c7aef 189-192,197-203,213,215,220-228
+terraform-provider-tracecat/tracecat/resource_workflow.go
+  s_bd663eca5bf4c3::t_f0bf007d286084 24,273-277
+  s_bd663eca5bf4c3::t_0419f0a7420889 32,47,77,99-100,138,314-328,387
+  s_bd663eca5bf4c3::t_af439f0d92caed 25-28,31,105,124-131,137,140-151,153,357-372
+  s_bd663eca5bf4c3::t_03aa5ca290da83 30
+  s_bd663eca5bf4c3::t_ff177ff7d7f74f 12,46,50-64,66-76,78-98,101-104,106-123,132-136,139,152,154-158,163-170,177-185,214,216-236,239-240,243,245-246,248-272,278-313,382-386
+  s_bd663eca5bf4c3::t_1dc6ed2bc5e924 159-162,171-176,215
+  s_bd663eca5bf4c3::t_e343910fc56ce3 186-213
+  s_bd663eca5bf4c3::t_0cf523e4a6898b 29,381
+  s_bd663eca5bf4c3::t_3709dd4ad9e6e6 33-35
+006/licenses/sigma-engine-MIT.txt
+  s_bd663eca5bf4c3::t_3753ed4136c05b 1-21
+terraform-provider-tracecat/tracecat/resource_organization_test.go
+  s_bd663eca5bf4c3::t_f0888e41491bb6 31-32,35-40,53-61,68-69,72-80,98-99,102-110
+  s_bd663eca5bf4c3::t_d88a21782bd2ea 64-66
+  s_bd663eca5bf4c3::t_a343f91abb4304 1-30,33-34,41-52,62-63,67,70-71,81-97,100-101,111
+  s_bd663eca5bf4c3::t_0e04e9dda0fb7c 112-138
+004/assets/sample-data.zip
+  s_bd663eca5bf4c3::t_babc6016b3dd7e 1-3
+006/target/sigma_runner/Cargo.lock
+  s_bd663eca5bf4c3::t_bd08680cbb731c 1-584
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "fd5cbee9de861f979c4019e033de5e73a02bea52",
+  "prompts": {},
+  "sessions": {
+    "s_8229a027b12dd6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ac09-1c7f-78e1-8d47-cd1a2995a5ea",
+        "model": "unknown"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    },
+    "s_bd663eca5bf4c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ab7d-e934-7f43-af23-872482c78de3",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    },
+    "s_f34827139f20fc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ac15-5db8-7980-9552-487b9eacd28a",
+        "model": "unknown"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    }
+  }
+}
