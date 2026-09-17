@@ -4,15 +4,17 @@ Run security-agent evaluations in Tracecat, modify the Candidate, and measure th
 
 ## Quick start
 
+> [!IMPORTANT]
+> Use these labs for training, experimentation, and evaluation: they require two
+> Tracecat Enterprise (EE) entitlements—`service_accounts` for API access and
+> `agent_addons` for agent folders and tags.
+
 Run commands from this repository's root.
 
 | Prerequisite | Required |
 |---|---|
 | Tools | Terraform 1.11+, Go, Python 3, Docker Compose, `just`, `jq`, `curl`, `openssl`, Git LFS |
-| Tracecat Enterprise entitlements | `service_accounts` (API access), `agent_addons` (agent folders and tags) |
 | Model access | A model provider and its credential, configured during setup |
-
-Use these labs for training, experimentation, and evaluation.
 
 1. **Set up Tracecat.** Follow the prompts to select a workspace and configure model access.
 
