@@ -1,0 +1,32 @@
+terraform/modules/runtime/workflows/run-evaluation.yml
+  s_bd663eca5bf4c3::t_5423644d73f350 42,65,129-135,137,193,198,201-202,204-205
+terraform/modules/runtime/workflows/judge-run.yml
+  s_bd663eca5bf4c3::t_5423644d73f350 28,81,106-113,115,124,129,132-133,135-136
+README.md
+  s_bd663eca5bf4c3::t_be6a9d40ec73a5 158-162
+scripts/tests/test_runtime_batches.py
+  s_bd663eca5bf4c3::t_be6a9d40ec73a5 1-112
+terraform/modules/runtime/main.tf
+  s_bd663eca5bf4c3::t_5423644d73f350 10
+terraform/modules/runtime/workflows/run-trial-batch.yml
+  s_bd663eca5bf4c3::t_fe488319a6d7ec 1-10,12-27
+  s_bd663eca5bf4c3::t_be6a9d40ec73a5 11
+scripts/setup.sh
+  s_bd663eca5bf4c3::t_5423644d73f350 79-80,409-412
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "f203f6e58e1dd336356a157e21b98e929f2e516a",
+  "prompts": {},
+  "sessions": {
+    "s_bd663eca5bf4c3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ab7d-e934-7f43-af23-872482c78de3",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    }
+  }
+}
