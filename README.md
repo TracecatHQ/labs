@@ -5,7 +5,7 @@ Run security-agent evaluations in Tracecat, modify the Candidate, and measure th
 ## Quick start
 
 > [!IMPORTANT]
-> Use these labs for training, experimentation, and evaluation: they require two
+> Use these labs only for training, experimentation, and evaluation: they require two
 > Tracecat Enterprise (EE) entitlements—`service_accounts` for API access and
 > `agent_addons` for agent folders and tags.
 
