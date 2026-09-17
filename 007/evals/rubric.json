@@ -1,0 +1,23 @@
+{
+  "schema_version": 2,
+  "profile_id": "lab-007-sevenllm-english-mcq",
+  "profile_version": 1,
+  "scorer": {
+    "kind": "deterministic",
+    "workflow_alias": "score_mcq_answer"
+  },
+  "criteria": [
+    {
+      "criterion_id": "correct-option",
+      "label": "Correct multiple-choice option",
+      "type": "binary",
+      "weight": 100,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Award 1 only when the trimmed, case-normalized final response is exactly one letter from A through D and equals the hidden answer."
+    }
+  ],
+  "metrics": [
+    {"metric_id": "accuracy", "label": "MCQ accuracy", "type": "numeric", "source_criterion_id": "correct-option"}
+  ]
+}

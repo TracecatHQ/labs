@@ -59,23 +59,35 @@ func tableRowCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.
 }
 
 func resolveTableRowID(ctx context.Context, c *Client, d *schema.ResourceData) error {
-	var out struct {
-		Items []map[string]any `json:"items"`
-	}
-	path := rowPath(d) + "?limit=200&order_by=" + url.QueryEscape(d.Get("identity_column").(string)) + "&sort=asc"
-	_, err := c.JSON(ctx, http.MethodGet, path, d.Get("workspace_id").(string), nil, &out)
-	if err != nil {
-		return err
-	}
 	column := d.Get("identity_column").(string)
 	value := d.Get("identity_value").(string)
-	for _, row := range out.Items {
-		if fmt.Sprint(row[column]) == value {
-			if id := responseID(row); id != "" {
-				d.SetId(id)
-				return nil
+	basePath := rowPath(d) + "?limit=200&order_by=" + url.QueryEscape(column) + "&sort=asc"
+	cursor := ""
+	for {
+		var out struct {
+			Items      []map[string]any `json:"items"`
+			NextCursor string           `json:"next_cursor"`
+			HasMore    bool             `json:"has_more"`
+		}
+		path := basePath
+		if cursor != "" {
+			path += "&cursor=" + url.QueryEscape(cursor)
+		}
+		if _, err := c.JSON(ctx, http.MethodGet, path, d.Get("workspace_id").(string), nil, &out); err != nil {
+			return err
+		}
+		for _, row := range out.Items {
+			if fmt.Sprint(row[column]) == value {
+				if id := responseID(row); id != "" {
+					d.SetId(id)
+					return nil
+				}
 			}
 		}
+		if !out.HasMore || out.NextCursor == "" {
+			break
+		}
+		cursor = out.NextCursor
 	}
 	return fmt.Errorf("created Tracecat table row but could not resolve %s=%q", column, value)
 }

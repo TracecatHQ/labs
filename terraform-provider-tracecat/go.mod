@@ -2,7 +2,11 @@ module github.com/TracecatHQ/terraform-provider-tracecat
 
 go 1.25.0
 
-require github.com/hashicorp/terraform-plugin-sdk/v2 v2.37.0
+require (
+	github.com/hashicorp/go-cty v1.5.0
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.37.0
+	gopkg.in/yaml.v3 v3.0.1
+)
 
 require (
 	github.com/agext/levenshtein v1.2.2 // indirect
@@ -10,7 +14,6 @@ require (
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/hashicorp/go-cty v1.5.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-plugin v1.6.3 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect

@@ -1,0 +1,212 @@
+version: 1
+definition:
+  title: Score CTI-REALM Sigma Derivative Trial
+  description: Compose CTI/Sigma Judge scores with deterministic Sigma execution provenance, Jaccard, matched-event F1, and aggregation logic.
+  entrypoint:
+    ref: judge
+    expects:
+      trial:
+        type: dict
+        description: Full frozen Trial including profile, Oracle, Submission, visible analysis, and tool evidence.
+  config: {timeout: 700}
+  actions:
+    - ref: judge
+      action: core.workflow.execute
+      args:
+        workflow_alias: score_with_judge
+        trigger_inputs: {trial: "${{ TRIGGER.trial }}"}
+        wait_strategy: wait
+        timeout: 600
+    - ref: reconcile
+      action: core.script.run_python
+      depends_on: [judge]
+      args:
+        inputs:
+          trial: ${{ TRIGGER.trial }}
+          judge_result: ${{ ACTIONS.judge.result }}
+        script: |
+          import json, re, time
+
+          REQUIRED={"sigma_rule","data_source","matched_events"}
+          TRACKED={"execute_sigma_rule","get_event_source_schema","sample_event_source","search_cti_reports"}
+
+          def contract(value):
+              if isinstance(value,dict):
+                  if isinstance(value.get("criteria"),list): return value
+                  for key in ("return_value","result","data","output"):
+                      found=contract(value.get(key))
+                      if found: return found
+              return None
+
+          def walk(value,path=""):
+              yield path,value
+              if isinstance(value,dict):
+                  for k,v in value.items(): yield from walk(v,f"{path}.{k}" if path else str(k))
+              elif isinstance(value,list):
+                  for i,v in enumerate(value): yield from walk(v,f"{path}[{i}]")
+
+          def parse_json(text):
+              if not isinstance(text,str): return None
+              try:
+                  value=json.loads(text)
+                  return value if isinstance(value,dict) else None
+              except Exception: pass
+              for match in reversed(re.findall(r"\{[\s\S]*\}",text)):
+                  try:
+                      value=json.loads(match)
+                      if isinstance(value,dict): return value
+                  except Exception: continue
+              return None
+
+          def submission(trial):
+              found=[]
+              for _,value in walk(trial):
+                  if isinstance(value,dict) and REQUIRED.issubset(value): found.append(value)
+                  elif isinstance(value,str):
+                      parsed=parse_json(value)
+                      if parsed and REQUIRED.issubset(parsed): found.append(parsed)
+              return found[-1] if found else None
+
+          def events(value):
+              if isinstance(value,str):
+                  try: return events(json.loads(value))
+                  except Exception: return []
+              if isinstance(value,dict):
+                  for key in ("matched_events","events","rows","Rows","data","result","return_value","results","reports"):
+                      if key in value:
+                          got=events(value[key])
+                          if got: return got
+                  tables=value.get("Tables")
+                  if isinstance(tables,list) and tables:
+                      table=tables[0]; cols=[c.get("ColumnName",c.get("name")) for c in table.get("Columns",[])]
+                      return [dict(zip(cols,row)) for row in table.get("Rows",[])]
+              if isinstance(value,list) and all(isinstance(x,dict) for x in value):
+                  decoded=[]
+                  for block in value:
+                      if block.get("type")=="text" and isinstance(block.get("text"),str): decoded.extend(events(block["text"]))
+                  return decoded or value
+              return []
+
+          def calls(trial):
+              out=[]; pending={}
+              for event in trial.get("evidence",[]):
+                  if not isinstance(event,dict) or not isinstance(event.get("evidence"),dict): continue
+                  evidence=event["evidence"]
+                  if event.get("evidence_type")=="tool_call":
+                      inputs=evidence.get("input") if isinstance(evidence.get("input"),dict) else {}
+                      name=inputs.get("workflow_alias") or inputs.get("alias") or evidence.get("tool_name","")
+                      name=str(name).replace("-","_").split(".")[-1]
+                      trigger=inputs.get("trigger_inputs") if isinstance(inputs.get("trigger_inputs"),dict) else inputs
+                      if name in TRACKED:
+                          pending[evidence.get("tool_call_id")]={"tool":name,"sigma_rule":trigger.get("sigma_rule"),"data_source":trigger.get("data_source"),"tag":trigger.get("tag",""),"events":[],"success":False,"path":f"evidence[{event.get('sequence')}]"}
+                  elif event.get("evidence_type")=="tool_result" and evidence.get("tool_call_id") in pending:
+                      call=pending[evidence.get("tool_call_id")]
+                      call["success"]=bool(evidence.get("success")); call["events"]=events(evidence.get("content")); out.append(call)
+              # Compatibility fallback for imported Trials that already store normalized tool records.
+              for path,value in walk(trial):
+                  if path.startswith("evidence["): continue
+                  if not isinstance(value,dict): continue
+                  name=value.get("tool") or value.get("workflow_alias") or value.get("function") or value.get("name")
+                  if isinstance(name,dict): name=name.get("name")
+                  name=str(name or "").replace("-","_").split(".")[-1]
+                  if name not in TRACKED: continue
+                  args=value.get("args") or value.get("arguments") or value.get("trigger_inputs") or {}
+                  result=value.get("result",value.get("output",value.get("return_value",value)))
+                  out.append({"tool":name,
+                              "sigma_rule":value.get("sigma_rule") if "sigma_rule" in value else (args.get("sigma_rule") if isinstance(args,dict) else None),
+                              "data_source":value.get("data_source") if "data_source" in value else (args.get("data_source") if isinstance(args,dict) else None),
+                              "tag":value.get("tag") or (args.get("tag","") if isinstance(args,dict) else ""),
+                              "events":events(result),"success":not bool(value.get("error")),"path":path})
+              unique=[]; seen=set()
+              for call in out:
+                  key=(call["tool"],canonical(call.get("sigma_rule")),canonical(call.get("data_source")),call.get("tag",""),canonical(call["events"]))
+                  if key not in seen: seen.add(key); unique.append(call)
+              return unique
+
+          def canonical(value): return json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(",",":"),default=str)
+          def projection(proposed,recorded):
+              return bool(proposed) and all(key in recorded and canonical(value)==canonical(recorded[key]) for key,value in proposed.items())
+          def verify(submitted,tool_calls):
+              proposed=events(submitted["matched_events"])
+              if not proposed: return False
+              for call in tool_calls:
+                  if call["tool"]=="execute_sigma_rule" and call["success"] and call.get("sigma_rule")==submitted["sigma_rule"] and call.get("data_source")==submitted["data_source"]:
+                      if all(any(projection(event,row) for row in call["events"]) for event in proposed): return True
+              return False
+          def jac(a,b): return len(a&b)/len(a|b) if a and b else (1.0 if not a and not b else 0.0)
+          def f1(result_events,patterns):
+              result_events=events(result_events)
+              if not result_events or not patterns: return 0.0
+              matched=0; fields=set()
+              for event in result_events:
+                  lower={str(k).lower():v for k,v in event.items()}
+                  for field,pattern in patterns.items():
+                      try: ok=field.lower() in lower and re.search(pattern,str(lower[field.lower()]))
+                      except re.error: ok=False
+                      if ok: matched+=1; fields.add(field)
+              precision=matched/(len(patterns)*len(result_events)); recall=len(fields)/len(patterns)
+              return 2*precision*recall/(precision+recall) if precision+recall else 0.0
+          def source_values(value):
+              if isinstance(value,list): return {str(x).lower() for x in value if str(x).strip()}
+              return {str(value).lower()} if value is not None and str(value).strip() else set()
+
+          def main(trial,judge_result):
+              started=time.monotonic(); base={"evaluation_error":None,"judge_session_id":None,"scorer_latency_seconds":None,"criteria":[],"metrics":[]}
+              judged=contract(judge_result)
+              if not judged:
+                  base["evaluation_error"]="score_with_judge returned no scorer contract"; base["scorer_latency_seconds"]=time.monotonic()-started; return base
+              if judged.get("evaluation_error"): return judged
+              base["judge_session_id"]=judged.get("judge_session_id")
+              final=submission(trial)
+              if not final or set(final)!=REQUIRED:
+                  base["evaluation_error"]="final output must contain exactly sigma_rule, data_source, and matched_events"; base["scorer_latency_seconds"]=time.monotonic()-started; return base
+              oracle=trial.get("oracle",{}); criteria=oracle.get("criteria",{}); tool_calls=calls(trial)
+              visible=[]
+              for path,value in walk(trial):
+                  if isinstance(value,str) and any(x in path.lower() for x in ("comment","content","analysis","message","submission")) and "oracle" not in path.lower(): visible.append(value)
+              visible_text="\n".join(visible)+"\n"+str(final.get("sigma_rule",""))+"\n"+str(final.get("data_source",""))
+              expected_t={str(x).upper() for x in criteria["c1-mitre-mapping"].get("expected",[])}
+              all_found_t={x.upper() for x in re.findall(r"T\d{4}(?:\.\d{3})?",visible_text,re.I)}
+              found_t=all_found_t & expected_t; c1=jac(found_t,expected_t)
+              expected_d={str(x).lower() for x in criteria["c2-data-exploration"].get("expected",[])}
+              all_found_d=set()
+              for call in tool_calls:
+                  if call["success"] and call["tool"] in {"get_event_source_schema","sample_event_source"}:
+                      all_found_d |= source_values(call.get("data_source"))
+              found_d=all_found_d & expected_d; c2=jac(found_d,expected_d)
+              distinct={(canonical(c.get("sigma_rule")),canonical(c.get("data_source"))) for c in tool_calls if c["tool"]=="execute_sigma_rule" and c["success"] and c["events"]}
+              c3=1 if len(distinct)>=2 else 0
+              verified=verify(final,tool_calls)
+              c4f=f1(final["matched_events"],criteria["c4-matched-event-f1"].get("regex_patterns",{})) if verified else 0.0
+              judged_criteria=judged.get("criteria",[])
+              required_judged={"c0-cti-alignment","c4-sigma-syntax","c4-sigma-specificity"}
+              if any(sum(x.get("criterion_id")==criterion_id for x in judged_criteria)!=1 for criterion_id in required_judged):
+                  base["evaluation_error"]="Judge must return each CTI model-owned criterion exactly once"; base["scorer_latency_seconds"]=time.monotonic()-started; return base
+              judged_by={x.get("criterion_id"):x for x in judged_criteria}
+              cti_calls=[c for c in tool_calls if c["tool"]=="search_cti_reports" and c["success"] and str(c.get("tag","")).strip() and c["events"]]
+              c0=max(0.0,min(1.0,float((judged_by.get("c0-cti-alignment") or {}).get("value",0)))) if cti_calls else 0.0
+              sigma_syntax=max(0.0,min(1.0,float((judged_by.get("c4-sigma-syntax") or {}).get("value",0))))
+              sigma_specificity=max(0.0,min(1.0,float((judged_by.get("c4-sigma-specificity") or {}).get("value",0))))
+              refs=lambda names:[c["path"] for c in tool_calls if c["tool"] in names]
+              base["criteria"]=[
+                  {"criterion_id":"c0-cti-alignment","value":c0,"reason":str((judged_by.get("c0-cti-alignment") or {}).get("reason","")) if cti_calls else "No successful tagged CTI report retrieval with returned reports was recorded.","evidence_refs":refs({"search_cti_reports"})},
+                  {"criterion_id":"c1-mitre-mapping","value":c1,"reason":f"Upstream-compatible Jaccard matched={sorted(found_t)} all_mentioned={sorted(all_found_t)} expected={sorted(expected_t)}","evidence_refs":[]},
+                  {"criterion_id":"c2-data-exploration","value":c2,"reason":f"Upstream-compatible Jaccard matched={sorted(found_d)} all_explored={sorted(all_found_d)} expected={sorted(expected_d)}","evidence_refs":refs({"get_event_source_schema","sample_event_source"})},
+                  {"criterion_id":"c3-sigma-execution","value":c3,"reason":f"{len(distinct)} distinct successful nonempty Sigma executions","evidence_refs":refs({"execute_sigma_rule"})},
+                  {"criterion_id":"c4-matched-event-f1","value":c4f,"reason":"Every submitted field and value was verified against an event from the recorded exact rule and data-source execution before Oracle field-slot F1." if verified else "Submitted events were not verified as field-preserving projections of the recorded exact rule and data-source execution.","evidence_refs":refs({"execute_sigma_rule"})},
+                  {"criterion_id":"c4-sigma-syntax","value":sigma_syntax,"reason":str((judged_by.get("c4-sigma-syntax") or {}).get("reason","")),"evidence_refs":(judged_by.get("c4-sigma-syntax") or {}).get("evidence_refs",[])},
+                  {"criterion_id":"c4-sigma-specificity","value":sigma_specificity,"reason":str((judged_by.get("c4-sigma-specificity") or {}).get("reason","")),"evidence_refs":(judged_by.get("c4-sigma-specificity") or {}).get("evidence_refs",[])},
+              ]
+              trajectory=.125*c0+.075*c1+.1*c2+.05*c3; outcome=.5*c4f+.0375*sigma_syntax+.1125*sigma_specificity; total=trajectory+outcome
+              sample=trial.get("submission",{}).get("case",{}).get("payload",{}).get("sample_id","")
+              base["metrics"]=[
+                  {"metric_id":"normalized_score","value":total},
+                  {"metric_id":"trajectory_score","value":trajectory},
+                  {"metric_id":"outcome_score","value":outcome},
+                  {"metric_id":"iterative_sigma_execution","value":bool(c3)},
+                  {"metric_id":"matched_event_f1","value":c4f},
+                  {"metric_id":"matched_events_verified","value":verified},
+                  {"metric_id":"sample_id","value":str(sample)},
+              ]
+              base["scorer_latency_seconds"]=time.monotonic()-started; return base
+  returns: ${{ ACTIONS.reconcile.result }}

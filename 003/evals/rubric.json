@@ -1,18 +1,112 @@
 {
-  "schema_version": 1,
-  "rubric_id": "lab-003-firewall-rule",
-  "rubric_version": 2,
+  "schema_version": 2,
+  "profile_id": "lab-003-firewall-rule",
+  "profile_version": 3,
+  "scorer": {
+    "kind": "model",
+    "workflow_alias": "score_with_judge",
+    "judge_preset": "003-judge"
+  },
   "criteria": [
-    {"criterion_id":"deployable-ruleset","label":"Valid, deployable, healthy, and safely cleaned up","weight":0,"hard_gate":true,"judge_instruction":"Use Validate Firewall Rule with the Case target_id. Met only when apply_status is 201, activation_verified and cleanup_verified are true, remove_status is 200, target_id matches the Case, and every benign fixture is upstream-confirmed. A pre-existing slot conflict, inactive or mismatched target, initial target-health failure, validator failure, or cleanup failure is an evaluation error."},
-    {"criterion_id":"blocks-malicious-1","label":"Blocks malicious request variant 1","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."},
-    {"criterion_id":"blocks-malicious-2","label":"Blocks malicious request variant 2","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."},
-    {"criterion_id":"blocks-malicious-3","label":"Blocks malicious request variant 3","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."},
-    {"criterion_id":"blocks-malicious-4","label":"Blocks malicious request variant 4","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."},
-    {"criterion_id":"blocks-malicious-5","label":"Blocks malicious request variant 5","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."},
-    {"criterion_id":"allows-benign-1","label":"Preserves benign request 1","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has upstream_confirmed true."},
-    {"criterion_id":"allows-benign-2","label":"Preserves benign request 2","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has upstream_confirmed true."},
-    {"criterion_id":"allows-benign-3","label":"Preserves benign request 3","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has upstream_confirmed true."},
-    {"criterion_id":"allows-benign-4","label":"Preserves benign request 4","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has upstream_confirmed true."},
-    {"criterion_id":"allows-benign-5","label":"Preserves benign request 5","weight":10,"hard_gate":false,"judge_instruction":"Met only when the matching validator fixture has upstream_confirmed true."}
-  ]
+    {
+      "criterion_id": "deployable-ruleset",
+      "label": "Valid, deployable, healthy, and safely cleaned up",
+      "type": "binary",
+      "weight": 0,
+      "hard_gate": true,
+      "pass_threshold": 1,
+      "judge_instruction": "Use Validate Firewall Rule with the Case target_id. Value 1 only when apply_status is 201, activation_verified and cleanup_verified are true, remove_status is 200, target_id matches the Case, and every benign fixture is upstream-confirmed. A pre-existing slot conflict, inactive or mismatched target, initial target-health failure, validator failure, or cleanup failure is an evaluation error."
+    },
+    {
+      "criterion_id": "blocks-malicious-1",
+      "label": "Blocks malicious request variant 1",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."
+    },
+    {
+      "criterion_id": "blocks-malicious-2",
+      "label": "Blocks malicious request variant 2",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."
+    },
+    {
+      "criterion_id": "blocks-malicious-3",
+      "label": "Blocks malicious request variant 3",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."
+    },
+    {
+      "criterion_id": "blocks-malicious-4",
+      "label": "Blocks malicious request variant 4",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."
+    },
+    {
+      "criterion_id": "blocks-malicious-5",
+      "label": "Blocks malicious request variant 5",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has blocked true, proving an attributable Candidate HTTP 418 response."
+    },
+    {
+      "criterion_id": "allows-benign-1",
+      "label": "Preserves benign request 1",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has upstream_confirmed true."
+    },
+    {
+      "criterion_id": "allows-benign-2",
+      "label": "Preserves benign request 2",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has upstream_confirmed true."
+    },
+    {
+      "criterion_id": "allows-benign-3",
+      "label": "Preserves benign request 3",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has upstream_confirmed true."
+    },
+    {
+      "criterion_id": "allows-benign-4",
+      "label": "Preserves benign request 4",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has upstream_confirmed true."
+    },
+    {
+      "criterion_id": "allows-benign-5",
+      "label": "Preserves benign request 5",
+      "type": "binary",
+      "weight": 10,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Value 1 only when the matching validator fixture has upstream_confirmed true."
+    }
+  ],
+  "metrics": []
 }

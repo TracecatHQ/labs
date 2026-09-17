@@ -1,0 +1,40 @@
+version: 1
+definition:
+  title: __LAB_ID__ Run evaluation — Run first
+  description: RUN FIRST. Evaluates the __LAB_ID__ Candidate workflow through the shared evaluation runtime.
+  entrypoint:
+    ref: run_evaluation
+    expects:
+      case_ids:
+        type: list[str]
+        default: []
+        description: Optional Case Template IDs; empty selects every enabled case in this gym.
+      evaluation_run_id:
+        type: str
+        default: ""
+        description: Existing Evaluation Run ID to resume; empty starts a new run.
+      batch_size:
+        type: int
+        default: 4
+        description: Maximum Candidate Trials in flight.
+  config:
+    timeout: 0
+  actions:
+    - ref: run_evaluation
+      action: core.workflow.execute
+      retry_policy:
+        max_attempts: 1
+        timeout: 86400
+      args:
+        workflow_alias: run_evaluation
+        wait_strategy: wait
+        fail_strategy: all
+        timeout: 86400
+        trigger_inputs:
+          lab_id: "__LAB_ID__"
+          candidate_workflow_alias: "__CANDIDATE_WORKFLOW_ALIAS__"
+          new_evaluation_run_id: ${{ ENV.workflow.execution_id }}
+          case_ids: ${{ TRIGGER.case_ids }}
+          evaluation_run_id: ${{ TRIGGER.evaluation_run_id }}
+          batch_size: ${{ TRIGGER.batch_size }}
+  returns: ${{ ACTIONS.run_evaluation.result }}

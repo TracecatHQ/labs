@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "agent_presets": [
+    {
+      "name": "Lab 004 Candidate",
+      "slug": "004-candidate",
+      "description": "Hunts the public Simbian sample through a scoped read-only SQLite query workflow.",
+      "instructions_file": "agent_presets/candidate.md",
+      "actions": [
+        "core.cases.create_comment",
+        "core.cases.get_case",
+        "core.cases.update_case",
+        "core.workflow.execute"
+      ]
+    }
+  ],
+  "workflows": [
+    {
+      "alias": "query_threat_logs",
+      "file": "workflows/query-threat-logs.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "score_threat_hunt",
+      "file": "workflows/score-threat-hunt.yml",
+      "category": "scorer"
+    }
+  ]
+}

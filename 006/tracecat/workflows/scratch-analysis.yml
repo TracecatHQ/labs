@@ -1,0 +1,29 @@
+version: 1
+definition:
+  title: Isolated CTI Scratch Analysis
+  description: Network-disabled fixed Python utilities for local reasoning over supplied values.
+  entrypoint:
+    ref: analyze
+    expects:
+      operation: {type: str, description: "One of regex_find, jaccard, or json_project."}
+      payload:
+        type: dict
+        description: Operation-specific data.
+  actions:
+    - ref: analyze
+      action: core.script.run_python
+      args:
+        inputs: {operation: "${{ TRIGGER.operation }}", payload: "${{ TRIGGER.payload }}"}
+        script: |
+          import re
+          def main(operation,payload):
+              if operation=="regex_find":
+                  return {"matches":re.findall(str(payload["pattern"]),str(payload.get("text","")))}
+              if operation=="jaccard":
+                  a,b=set(map(str,payload.get("left",[]))),set(map(str,payload.get("right",[])))
+                  return {"jaccard":len(a&b)/len(a|b) if a|b else 1.0,"intersection":sorted(a&b)}
+              if operation=="json_project":
+                  keys=list(map(str,payload.get("keys",[])))[:50]
+                  return [{k:row.get(k) for k in keys} for row in payload.get("rows",[])[:100] if isinstance(row,dict)]
+              raise ValueError("unknown operation")
+  returns: ${{ ACTIONS.analyze.result }}

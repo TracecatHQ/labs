@@ -1,0 +1,5 @@
+/runtime/
+/results/
+/.terraform/
+/terraform/.terraform/
+/terraform/*.tfstate*

@@ -1,0 +1,78 @@
+version: 1
+definition:
+  title: Query SecRL Incident SQL
+  description: Execute one bounded read-only SQL query against the Case's incident database.
+  entrypoint:
+    ref: query
+    expects:
+      case_id:
+        type: str
+        description: Active Trial Case ID; the workflow derives its incident server-side.
+      query:
+        type: str
+        description: One read-only SELECT, WITH, SHOW, DESCRIBE, DESC, or EXPLAIN statement.
+      row_limit:
+        type: int
+        default: 50
+        description: Maximum returned rows; clamped to 1..200.
+  config:
+    timeout: 90
+  actions:
+    - ref: load_case
+      action: core.cases.get_case
+      args:
+        case_id: ${{ TRIGGER.case_id }}
+
+    - ref: query
+      action: core.script.run_python
+      depends_on: [load_case]
+      args:
+        allow_network: true
+        timeout_seconds: 60
+        dependencies: ["pymysql==1.1.1"]
+        inputs:
+          incident_id: ${{ ACTIONS.load_case.result.payload.incident_id }}
+          query: ${{ TRIGGER.query }}
+          row_limit: ${{ TRIGGER.row_limit }}
+        script: |
+          import re
+          import pymysql
+
+          INCIDENTS = {5, 34, 38, 39, 55, 134, 166, 322}
+          ALLOWED = re.compile(r"^\s*(select|with|show\s+(tables|columns)|describe|desc|explain)\b", re.I)
+          FORBIDDEN = re.compile(r"\b(insert|update|delete|replace|drop|alter|create|grant|revoke|truncate|load|outfile|dumpfile|procedure|function|lock|unlock|set)\b", re.I)
+
+          def main(incident_id, query, row_limit=50):
+              incident_id = int(incident_id)
+              if incident_id not in INCIDENTS:
+                  raise ValueError("unknown incident_id")
+              sql = str(query).strip()
+              if sql.endswith(";"):
+                  sql = sql[:-1].rstrip()
+              if ";" in sql or not ALLOWED.search(sql) or FORBIDDEN.search(sql):
+                  raise ValueError("only one read-only query is allowed")
+              row_limit = max(1, min(int(row_limit), 200))
+              if re.match(r"^\s*(select|with)\b", sql, re.I):
+                  terminal_limit = re.search(r"\blimit\s+(\d+)\s*$", sql, re.I)
+                  if terminal_limit:
+                      bounded = min(int(terminal_limit.group(1)), row_limit + 1)
+                      sql = f"{sql[:terminal_limit.start()]}LIMIT {bounded}"
+                  else:
+                      sql = f"{sql} LIMIT {row_limit + 1}"
+              connection = pymysql.connect(
+                  host=f"lab005-mysql-{incident_id}", port=3306,
+                  user="lab_reader", password="lab-reader-only",
+                  database="env_monitor_db", cursorclass=pymysql.cursors.SSDictCursor,
+                  connect_timeout=10, read_timeout=45, autocommit=True,
+              )
+              try:
+                  with connection.cursor() as cursor:
+                      cursor.execute("SET SESSION TRANSACTION READ ONLY")
+                      cursor.execute(sql)
+                      rows = cursor.fetchmany(row_limit + 1)
+                      truncated = len(rows) > row_limit
+                      rows = rows[:row_limit]
+                      return {"incident_id": incident_id, "query": sql, "row_count": len(rows), "truncated": truncated, "rows": rows}
+              finally:
+                  connection.close()
+  returns: ${{ ACTIONS.query.result }}

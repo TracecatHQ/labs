@@ -2,15 +2,21 @@
   "schema_version": 1,
   "agent_presets": [
     {
-      "name": "Candidate",
-      "slug": "candidate",
+      "name": "Lab 002 Candidate",
+      "slug": "002-candidate",
       "description": "Classifies one BOTSv3 alert using its exact DuckDB-readable evidence object and Case actions.",
       "instructions_file": "agent_presets/candidate.md",
-      "actions": ["core.cases.create_comment","core.cases.get_case","core.cases.update_case","core.cases.add_case_tag","core.duckdb.execute_sql"]
+      "actions": [
+        "core.cases.create_comment",
+        "core.cases.get_case",
+        "core.cases.update_case",
+        "core.cases.add_case_tag",
+        "core.duckdb.execute_sql"
+      ]
     },
     {
-      "name": "Judge",
-      "slug": "judge",
+      "name": "Lab 002 Judge",
+      "slug": "002-judge",
       "description": "Grades BOTSv3 determination and incident relevance against the hidden Oracle.",
       "instructions_file": "agent_presets/judge.md",
       "actions": [],

@@ -1,0 +1,19 @@
+version: 1
+definition:
+  title: Sample CTI-REALM Event Source
+  description: Return a bounded sample from one event source.
+  entrypoint:
+    ref: sample
+    expects:
+      data_source: {type: str, description: Exact source name returned by list_event_sources.}
+      limit: {type: int, default: 5, description: "Number of rows, clamped to 1..20."}
+  actions:
+    - ref: sample
+      action: core.http_request
+      args:
+        url: ${{ FN.concat("http://lab006-sigma:8080/v1/sources/", TRIGGER.data_source, "/sample") }}
+        method: GET
+        params:
+          limit: ${{ TRIGGER.limit }}
+        timeout: 20
+  returns: ${{ ACTIONS.sample.result.data }}

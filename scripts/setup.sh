@@ -302,6 +302,8 @@ required_scopes='[
   "integration:read", "integration:create", "integration:update", "integration:delete",
   "table:read", "table:create", "table:update", "table:delete",
   "agent:read", "agent:create", "agent:update", "agent:delete",
+  "case:read", "case:delete",
+  "tag:read", "tag:create", "tag:update", "tag:delete",
   "secret:read", "secret:create", "secret:update", "secret:delete",
   "action:core.*:execute", "action:ai.preset_agent:execute"
 ]'

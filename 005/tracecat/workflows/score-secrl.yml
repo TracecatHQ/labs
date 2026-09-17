@@ -1,0 +1,107 @@
+version: 1
+definition:
+  title: Score SecRL Trial
+  description: Compose the shared model Judge with deterministic SecRL reward arithmetic.
+  entrypoint:
+    ref: judge
+    expects:
+      trial:
+        type: dict
+        description: Full frozen Trial including profile, Oracle, and Submission.
+  config:
+    timeout: 700
+  actions:
+    - ref: judge
+      action: core.workflow.execute
+      args:
+        workflow_alias: score_with_judge
+        trigger_inputs:
+          trial: ${{ TRIGGER.trial }}
+        wait_strategy: wait
+        timeout: 600
+
+    - ref: reconcile
+      action: core.script.run_python
+      depends_on: [judge]
+      args:
+        inputs:
+          trial: ${{ TRIGGER.trial }}
+          judge_result: ${{ ACTIONS.judge.result }}
+        script: |
+          import json
+          import re
+          import time
+
+          def contract(value):
+              if isinstance(value, dict):
+                  if isinstance(value.get("criteria"), list):
+                      return value
+                  for key in ("return_value", "result", "data", "output"):
+                      found = contract(value.get(key))
+                      if found:
+                          return found
+              return None
+
+          def main(trial, judge_result):
+              started = time.monotonic()
+              base = {"evaluation_error": None, "judge_session_id": None,
+                      "scorer_latency_seconds": None, "criteria": [], "metrics": []}
+              judged = contract(judge_result)
+              if not judged:
+                  base["evaluation_error"] = "score_with_judge returned no scorer contract"
+                  base["scorer_latency_seconds"] = time.monotonic() - started
+                  return base
+              if judged.get("evaluation_error"):
+                  return judged
+              base["judge_session_id"] = judged.get("judge_session_id")
+              judged_criteria = judged.get("criteria", [])
+              required = {"answer-correct", "discounted-partial-reward"}
+              if any(sum(item.get("criterion_id") == criterion_id for item in judged_criteria) != 1 for criterion_id in required):
+                  base["evaluation_error"] = "Judge must return each SecRL-owned criterion exactly once"
+                  base["scorer_latency_seconds"] = time.monotonic() - started
+                  return base
+              by_id = {item.get("criterion_id"): item for item in judged_criteria}
+              answer_item = by_id.get("answer-correct") or {}
+              step_item = by_id.get("discounted-partial-reward") or {}
+              answer_ok = float(answer_item.get("value", 0)) >= 1.0
+              spec = trial.get("oracle", {}).get("criteria", {}).get("discounted-partial-reward", {})
+              expected_steps = spec.get("solution_steps", [])
+              marker = re.search(r"SECRL_ASSESSMENT_JSON:\s*(\{.*\})", str(step_item.get("reason", "")), re.S)
+              try:
+                  assessment = json.loads(marker.group(1)) if marker else {}
+              except json.JSONDecodeError:
+                  assessment = {}
+              raw_steps = assessment.get("step_results", [])
+              reflected_steps = assessment.get("step_reflection", [])
+              if not answer_ok and (len(raw_steps) != len(expected_steps) or len(reflected_steps) != len(expected_steps)):
+                  base["evaluation_error"] = "Judge step arrays do not match Oracle solution_steps"
+                  base["scorer_latency_seconds"] = time.monotonic() - started
+                  return base
+              if answer_ok:
+                  reward = 1.0
+              else:
+                  confirmed = [bool(a) and bool(b) for a, b in zip(raw_steps, reflected_steps)]
+                  reward, current = 0.0, float(spec.get("discount_factor", 0.4))
+                  for correct in list(reversed(confirmed))[1:]:
+                      if correct:
+                          reward += current
+                      reward = min(reward, 1.0)
+                      current *= float(spec.get("discount_factor", 0.4))
+              step_refs = assessment.get("step_evidence_refs") or []
+              base["criteria"] = [
+                  {"criterion_id": "answer-correct", "value": 1 if answer_ok else 0,
+                   "reason": str(answer_item.get("reason", "")),
+                   "evidence_refs": [str(x) for x in answer_item.get("evidence_refs", [])]},
+                  {"criterion_id": "discounted-partial-reward", "value": reward,
+                   "reason": "Full reward for reflected semantic correctness." if answer_ok else "SecRL reverse-order discount after reflected step grading.",
+                   "evidence_refs": [str(x) for refs in step_refs for x in (refs if isinstance(refs, list) else [refs])]},
+              ]
+              incident = trial.get("submission", {}).get("case", {}).get("payload", {}).get("incident_id")
+              base["metrics"] = [
+                  {"metric_id": "binary_success", "value": answer_ok},
+                  {"metric_id": "reward", "value": reward},
+                  {"metric_id": "incident_id", "value": str(incident) if incident is not None else ""},
+              ]
+              base["scorer_latency_seconds"] = time.monotonic() - started
+              return base
+  returns: ${{ ACTIONS.reconcile.result }}

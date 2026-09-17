@@ -1,0 +1,23 @@
+version: 1
+definition:
+  title: Execute CTI-REALM Sigma Rule
+  description: Execute one Sigma YAML rule against one event source and return bounded matching events.
+  entrypoint:
+    ref: execute
+    expects:
+      data_source: {type: str, description: Exact source name returned by list_event_sources.}
+      sigma_rule: {type: str, description: Sigma rule encoded as YAML.}
+      limit: {type: int, default: 10, description: "Maximum matching rows, clamped to 1..10."}
+  config: {timeout: 90}
+  actions:
+    - ref: execute
+      action: core.http_request
+      args:
+        url: http://lab006-sigma:8080/v1/execute
+        method: POST
+        timeout: 70
+        payload:
+          source: ${{ TRIGGER.data_source }}
+          sigma_rule: ${{ TRIGGER.sigma_rule }}
+          limit: ${{ TRIGGER.limit }}
+  returns: ${{ ACTIONS.execute.result.data }}

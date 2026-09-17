@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"testing"
 )
 
@@ -19,13 +18,13 @@ func TestLoadTerraformOutputsWithoutJQ(t *testing.T) {
 	directory := t.TempDir()
 	terraform := filepath.Join(directory, "terraform")
 	script := `#!/bin/sh
-printf '%s' '{"workspace_id":{"value":"workspace"},"table_ids":{"value":{"evaluation_runs":"runs","evaluation_scores":"scores","evaluation_trial_details":"details"}}}'
+printf '%s' '{"workspace_id":{"value":"workspace"},"table_ids":{"value":{"evaluation_runs":"runs","evaluation_trials":"trials","evaluation_evidence":"evidence","evaluation_scores":"scores","evaluation_metrics":"metrics","scoring_attempts":"attempts"}}}'
 `
 	if err := os.WriteFile(terraform, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", directory)
-	outputs, err := LoadTerraformOutputs(context.Background(), "/repo", "001")
+	outputs, err := LoadTerraformOutputs(context.Background(), "/repo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,19 +119,27 @@ func TestNumericColumnsAcceptNumbersAndQuotedDecimals(t *testing.T) {
 	}
 }
 
-func TestCollectHistoricalRunWithoutDetailsTable(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("old", "a", "a", "x", "x", true)}, true)
+func TestCollectInputsLoadsNormalizedTables(t *testing.T) {
+	inputs := fixtureInputs()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var value any
 		switch r.URL.Path {
 		case "/workspaces/workspace/tables/runs/rows":
 			value = map[string]any{"items": inputs.RunRows}
+		case "/workspaces/workspace/tables/trials/rows":
+			value = map[string]any{"items": inputs.Trials}
+		case "/workspaces/workspace/tables/evidence/rows":
+			value = map[string]any{"items": inputs.Evidence}
 		case "/workspaces/workspace/tables/scores/rows":
 			value = map[string]any{"items": inputs.Scores}
+		case "/workspaces/workspace/tables/metrics/rows":
+			value = map[string]any{"items": inputs.Metrics}
+		case "/workspaces/workspace/tables/attempts/rows":
+			value = map[string]any{"items": inputs.Attempts}
 		case "/workspaces/workspace/workflows/candidate/executions/exec":
 			value = inputs.CandidateExecution
 		case "/workspaces/workspace/workflows/judge/executions/exec":
-			value = inputs.JudgeExecution
+			value = inputs.ScoringExecutions[0]
 		default:
 			t.Errorf("unexpected request: %s", r.URL.Path)
 			http.NotFound(w, r)
@@ -145,7 +152,7 @@ func TestCollectHistoricalRunWithoutDetailsTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	collected, err := CollectInputs(context.Background(), client, TerraformOutputs{WorkspaceID: "workspace", TableIDs: map[string]string{"evaluation_runs": "runs", "evaluation_scores": "scores"}}, "999", fixtureRunID)
+	collected, err := CollectInputs(context.Background(), client, TerraformOutputs{WorkspaceID: "workspace", TableIDs: map[string]string{"evaluation_runs": "runs", "evaluation_trials": "trials", "evaluation_evidence": "evidence", "evaluation_scores": "scores", "evaluation_metrics": "metrics", "scoring_attempts": "attempts"}}, "999", fixtureRunID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,25 +160,7 @@ func TestCollectHistoricalRunWithoutDetailsTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.Summary().Timing.AgentLatencySeconds != nil {
-		t.Fatal("historical report should omit agent timing")
-	}
-}
-
-func TestFailedCandidateReportedBeforeMissingScores(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/workspaces/workspace/workflows/candidate/executions/exec" {
-			t.Errorf("unexpected request: %s", r.URL.Path)
-		}
-		_ = json.NewEncoder(w).Encode(Execution{ID: fixtureRunID, Status: "FAILED"})
-	}))
-	defer server.Close()
-	client, err := NewAPIClient(server.URL, "secret", server.Client())
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = CollectInputs(context.Background(), client, TerraformOutputs{WorkspaceID: "workspace"}, "999", fixtureRunID)
-	if err == nil || !strings.Contains(err.Error(), "Candidate execution is FAILED") || strings.Contains(err.Error(), "wait") {
-		t.Fatalf("error = %v", err)
+	if report.Summary().Trials.Count != 2 {
+		t.Fatalf("trial count = %d", report.Summary().Trials.Count)
 	}
 }

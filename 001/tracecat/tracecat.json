@@ -17,16 +17,23 @@
   ],
   "agent_presets": [
     {
-      "name": "Candidate",
-      "slug": "candidate",
+      "name": "Lab 001 Candidate",
+      "slug": "001-candidate",
       "description": "Investigates one Lab 001 alert using only Case actions and the attached Splunk MCP integration.",
       "instructions_file": "agent_presets/candidate.md",
-      "actions": ["core.cases.create_comment","core.cases.get_case","core.cases.update_case","core.cases.add_case_tag"],
-      "mcp_catalog_slugs": ["splunk-mcp"]
+      "actions": [
+        "core.cases.create_comment",
+        "core.cases.get_case",
+        "core.cases.update_case",
+        "core.cases.add_case_tag"
+      ],
+      "mcp_catalog_slugs": [
+        "splunk-mcp"
+      ]
     },
     {
-      "name": "Judge",
-      "slug": "judge",
+      "name": "Lab 001 Judge",
+      "slug": "001-judge",
       "description": "Grades a frozen Lab 001 Case Work Product against the hidden Oracle and Rubric.",
       "instructions_file": "agent_presets/judge.md",
       "actions": [],

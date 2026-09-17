@@ -1,0 +1,19 @@
+version: 1
+definition:
+  title: Validate CTI-REALM Sigma Rule
+  description: Parse and validate a Sigma YAML rule without executing it.
+  entrypoint:
+    ref: validate
+    expects:
+      sigma_rule: {type: str, description: Sigma rule encoded as YAML.}
+  config: {timeout: 60}
+  actions:
+    - ref: validate
+      action: core.http_request
+      args:
+        url: http://lab006-sigma:8080/v1/validate
+        method: POST
+        timeout: 20
+        payload:
+          sigma_rule: ${{ TRIGGER.sigma_rule }}
+  returns: ${{ ACTIONS.validate.result.data }}

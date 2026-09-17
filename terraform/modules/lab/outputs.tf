@@ -6,6 +6,6 @@ output "workflow_ids" {
   value = { for alias, workflow in tracecat_workflow.workflow : alias => workflow.id }
 }
 
-output "table_ids" {
-  value = { for name, table in tracecat_table.platform : name => table.id }
+output "agent_preset_ids" {
+  value = { for slug, preset in tracecat_agent_preset.preset : slug => preset.id }
 }

@@ -1,0 +1,6 @@
+/runtime/
+/results/
+/target/sigma_runner/target/
+/.terraform/
+/terraform/.terraform/
+/terraform/*.tfstate*

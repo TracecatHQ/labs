@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "profile_id": "lab-004-simbian-public-sample",
+  "profile_version": 1,
+  "scorer": {
+    "kind": "deterministic",
+    "workflow_alias": "score_threat_hunt"
+  },
+  "criteria": [
+    {
+      "criterion_id": "hierarchical-coverage",
+      "label": "Hierarchical attack coverage",
+      "type": "numeric",
+      "weight": 100,
+      "hard_gate": false,
+      "pass_threshold": 0,
+      "range": {"min": 0, "max": 1},
+      "judge_instruction": "Use the deterministic scorer value computed from narrative-step, chain-step, and tactic coverage."
+    }
+  ],
+  "metrics": [
+    {"metric_id": "coverage_overall", "label": "Overall tactic coverage", "type": "numeric", "source_criterion_id": "hierarchical-coverage"},
+    {"metric_id": "coverage_ta0002", "label": "Execution coverage (TA0002)", "type": "numeric"},
+    {"metric_id": "coverage_ta0003", "label": "Persistence coverage (TA0003)", "type": "numeric"},
+    {"metric_id": "coverage_ta0004", "label": "Privilege Escalation coverage (TA0004)", "type": "numeric"},
+    {"metric_id": "coverage_ta0005", "label": "Defense Evasion coverage (TA0005)", "type": "numeric"},
+    {"metric_id": "coverage_ta0006", "label": "Credential Access coverage (TA0006)", "type": "numeric"},
+    {"metric_id": "coverage_ta0007", "label": "Discovery coverage (TA0007)", "type": "numeric"},
+    {"metric_id": "coverage_ta0009", "label": "Collection coverage (TA0009)", "type": "numeric"},
+    {"metric_id": "coverage_ta0010", "label": "Exfiltration coverage (TA0010)", "type": "numeric"},
+    {"metric_id": "coverage_ta0011", "label": "Command and Control coverage (TA0011)", "type": "numeric"},
+    {"metric_id": "flags_detected", "label": "Flags detected", "type": "numeric"},
+    {"metric_id": "flags_total", "label": "Flags total", "type": "numeric"},
+    {"metric_id": "flags_percent", "label": "Flags detected percent", "type": "numeric"}
+  ]
+}

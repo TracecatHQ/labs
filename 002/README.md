@@ -38,10 +38,10 @@ Run from the repository root:
 
 ```bash
 just tracecat-up
-just init 002
+just init
 just up 002
-just plan 002
-just apply 002
+just plan
+just apply
 just run 002
 just status 002 RUN_ID=<candidate-run-id>
 just judge 002 RUN_ID=<candidate-run-id>

@@ -10,183 +10,174 @@ import (
 )
 
 const (
-	fixtureRunID   = "candidate/exec"
-	fixtureJudgeID = "judge/exec"
+	fixtureRunID     = "candidate/exec"
+	fixtureScoringID = "judge/exec"
 )
 
-type trialSpec struct {
-	id                                    string
-	expectedKind, predictedKind           *string
-	expectedRelevance, predictedRelevance *string
-	gateMet                               bool
-}
-
-func TestPerfectImbalancedClassification(t *testing.T) {
-	report := mustReport(t, []trialSpec{
-		spec("a1", "a", "a", "x", "x", true),
-		spec("a2", "a", "a", "x", "x", true),
-		spec("a3", "a", "a", "y", "y", true),
-		spec("b1", "b", "b", "x", "x", true),
-	}, false)
-	metrics := report.Summary().Classification.Criteria["kind"]
-	assertFloat(t, metrics.Accuracy, 1)
-	assertFloat(t, metrics.BalancedAccuracy, 1)
-	assertFloat(t, metrics.MacroF1, 1)
-	if got := metrics.ConfusionMatrix["a"]; got["a"] != 3 || got["b"] != 0 || got[AbstentionLabel] != 0 {
-		t.Fatalf("unexpected confusion row: %#v", got)
-	}
-}
-
-func TestMinorityFailureIsValidLowScore(t *testing.T) {
-	report := mustReport(t, []trialSpec{
-		spec("a1", "a", "a", "x", "x", true),
-		spec("a2", "a", "a", "x", "x", true),
-		spec("b1", "b", "a", "x", "x", true),
-	}, false)
-	metrics := report.Summary().Classification.Criteria["kind"]
-	assertFloat(t, metrics.Accuracy, 2.0/3)
-	assertFloat(t, metrics.PerClass["b"].Recall, 0)
-	if metrics.PerClass["b"].Precision != nil {
-		t.Fatal("minority precision should be undefined")
-	}
-	assertFloat(t, metrics.PerClass["b"].F1, 0)
-	if got := report.Summary().Trials.MeanScore; math.Abs(got-250.0/3) > epsilon {
-		t.Fatalf("mean score = %v", got)
-	}
-}
-
-func TestAbstentionCountsAsIncorrect(t *testing.T) {
-	report := mustReport(t, []trialSpec{
-		specPtr("a1", ptr("a"), nil, ptr("x"), ptr("x"), true),
-		spec("b1", "b", "b", "y", "y", true),
-	}, false)
-	metrics := report.Summary().Classification.Criteria["kind"]
-	assertFloat(t, metrics.Accuracy, 0.5)
-	if metrics.ConfusionMatrix["a"][AbstentionLabel] != 1 {
-		t.Fatalf("abstention not counted: %#v", metrics.ConfusionMatrix)
-	}
-}
-
-func TestHardGateFailuresAreExcluded(t *testing.T) {
-	report := mustReport(t, []trialSpec{
-		spec("passed", "a", "a", "x", "x", true),
-		spec("failed", "b", "b", "y", "y", false),
-	}, false)
-	if got := report.Summary().Classification.Criteria["kind"].Support; got != 1 {
-		t.Fatalf("classification support = %d", got)
-	}
-	assertFloat(t, report.Summary().Trials.HardGatePassRate, 0.5)
-	if report.Summary().Trials.MinScore != 0 {
-		t.Fatalf("minimum score = %v", report.Summary().Trials.MinScore)
-	}
-}
-
-func TestMultipleOutputsHaveJointExactMatch(t *testing.T) {
-	report := mustReport(t, []trialSpec{
-		spec("one", "a", "a", "x", "x", true),
-		spec("two", "b", "b", "y", "x", true),
-	}, false)
-	assertFloat(t, report.Summary().Classification.JointExactMatchAccuracy, 0.5)
-}
-
-func TestUndefinedJointExactMatchIsExplicitNull(t *testing.T) {
-	report := mustReport(t, []trialSpec{
-		spec("one", "a", "a", "x", "x", false),
-		spec("two", "b", "b", "y", "y", false),
-	}, false)
-	data, err := json.Marshal(report.Summary())
+func TestNumericAndBinaryCriteriaAggregate(t *testing.T) {
+	inputs := fixtureInputs()
+	report, err := NewReport(inputs)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), `"joint_exact_match_accuracy":null`) {
-		t.Fatalf("summary does not contain explicit null: %s", data)
+	if got := report.Summary().Trials.MeanScore; math.Abs(got-75) > epsilon {
+		t.Fatalf("mean score = %v", got)
 	}
-	if !strings.Contains(report.TerminalReport(), "Joint exact-match accuracy: N/A") {
-		t.Fatal("terminal report does not show undefined joint exact match")
+	if got := report.Summary().Criteria["quality"].MeanValue; math.Abs(got-7.5) > epsilon {
+		t.Fatalf("mean numeric value = %v", got)
 	}
-}
-
-func TestLegacyResultsHaveGenericReport(t *testing.T) {
-	report := mustReport(t, []trialSpec{spec("old", "a", "a", "x", "x", true)}, true)
-	if report.Summary().Timing.AgentLatencySeconds != nil {
-		t.Fatal("legacy report has agent timing")
-	}
-	if len(report.Summary().Classification.Criteria) != 0 {
-		t.Fatal("legacy report has classification metrics")
-	}
-	if len(report.Summary().Notices) != 1 || !strings.Contains(report.Summary().Notices[0], "re-judge") {
-		t.Fatalf("legacy notice = %#v", report.Summary().Notices)
+	if got := report.Summary().Provenance.ScorerKind; got != "hybrid" {
+		t.Fatalf("scorer kind = %q", got)
 	}
 }
 
-func TestMissingScoreRowIsRejected(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
-	inputs.Scores = inputs.Scores[:len(inputs.Scores)-1]
-	assertErrorContains(t, inputs, "coverage is incomplete")
-}
-
-func TestNoScoresIncludeJudgeGuidance(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
-	inputs.Scores = nil
-	assertErrorContains(t, inputs, "just judge 999")
-}
-
-func TestDuplicateScoreRowIsRejected(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
-	inputs.Scores = append(inputs.Scores, inputs.Scores[0])
-	assertErrorContains(t, inputs, "duplicate")
-}
-
-func TestInvalidScoreArithmeticIsRejected(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
-	for index := range inputs.Scores {
-		inputs.Scores[index].TrialScore = 17
+func TestHardGateZerosTrialTotal(t *testing.T) {
+	inputs := fixtureInputs()
+	for i := range inputs.Scores {
+		if inputs.Scores[i].TrialID == "two" {
+			inputs.Scores[i].TrialHardFailed = true
+			inputs.Scores[i].TrialScore = 0
+			if inputs.Scores[i].CriterionID == "gate" {
+				inputs.Scores[i].CriterionValue = 0
+				inputs.Scores[i].CriterionPassed = false
+			}
+		}
 	}
-	assertErrorContains(t, inputs, "score arithmetic")
+	report, err := NewReport(inputs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFloat(t, report.Summary().Trials.HardGatePassRate, 0.5)
+	if report.Summary().Trials.MinScore != 0 {
+		t.Fatalf("min score = %v", report.Summary().Trials.MinScore)
+	}
 }
 
-func TestIncompleteExecutionIsRejected(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
-	inputs.CandidateExecution.Status = "RUNNING"
-	assertErrorContains(t, inputs, "wait for it to complete")
+func TestClassificationMetricAndAbstention(t *testing.T) {
+	inputs := fixtureInputs()
+	inputs.Metrics[1].Value = json.RawMessage(`null`)
+	report, err := NewReport(inputs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	metric := report.Summary().Metrics["verdict"].Classification
+	assertFloat(t, metric.Accuracy, 0.5)
+	if metric.ConfusionMatrix["bad"][AbstentionLabel] != 1 {
+		t.Fatalf("confusion matrix = %#v", metric.ConfusionMatrix)
+	}
 }
 
-func TestReportWritesCSVAndJSON(t *testing.T) {
-	report := mustReport(t, []trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
+func TestNumericMetricIncludesSampleStandardError(t *testing.T) {
+	inputs := fixtureInputs()
+	definition := MetricDefinition{MetricID: "quality_value", Label: "quality value", Type: "numeric"}
+	inputs.RunRows[0].Profile.Metrics = append(inputs.RunRows[0].Profile.Metrics, definition)
+	for i := range inputs.Trials {
+		inputs.Trials[i].Trial.Profile = inputs.RunRows[0].Profile
+		value := 2 + i*2
+		inputs.Metrics = append(inputs.Metrics, MetricRow{MetricKey: fixtureRunID + ":" + inputs.Trials[i].TrialID + ":quality_value", SchemaVersion: 2, LabID: "999", EvaluationRunID: fixtureRunID, TrialID: inputs.Trials[i].TrialID, CaseID: inputs.Trials[i].CaseID, TrialNumber: 1, ScoringRunExecutionID: fixtureScoringID, ScoringAttemptID: "attempt-" + inputs.Trials[i].TrialID, ProfileID: "fixture", ProfileVersion: 1, MetricID: "quality_value", MetricType: "numeric", Value: json.RawMessage(number(float64(value))), ExpectedValue: json.RawMessage(`null`), ScoredAt: "2026-01-01T00:02:00Z"})
+	}
+	report, err := NewReport(inputs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	aggregate := report.Summary().Metrics["quality_value"]
+	assertFloat(t, aggregate.Mean, 3)
+	assertFloat(t, aggregate.StandardError, 1)
+}
+
+func TestNumericOutOfRangeRejected(t *testing.T) {
+	inputs := fixtureInputs()
+	for i := range inputs.Scores {
+		if inputs.Scores[i].CriterionID == "quality" {
+			inputs.Scores[i].CriterionValue = 11
+			break
+		}
+	}
+	assertErrorContains(t, inputs, "outside the criterion range")
+}
+
+func TestIncompleteMetricCoverageRejected(t *testing.T) {
+	inputs := fixtureInputs()
+	inputs.Metrics = inputs.Metrics[:1]
+	assertErrorContains(t, inputs, "metric coverage is incomplete")
+}
+
+func TestUnorderedFrozenEvidenceRejected(t *testing.T) {
+	inputs := fixtureInputs()
+	inputs.Evidence[1].Sequence = 9
+	inputs.Evidence[1].EvidenceKey = fixtureRunID + ":one:9"
+	assertErrorContains(t, inputs, "evidence is not ordered")
+}
+
+func TestReportWritesScoresMetricsAndSummary(t *testing.T) {
+	report, err := NewReport(fixtureInputs())
+	if err != nil {
+		t.Fatal(err)
+	}
 	directory := t.TempDir()
 	if err := report.Write(directory); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(directory, "scores.csv")); err != nil {
-		t.Fatal(err)
-	}
-	data, err := os.ReadFile(filepath.Join(directory, "summary.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var summary Summary
-	if err := json.Unmarshal(data, &summary); err != nil {
-		t.Fatal(err)
-	}
-	if summary.Trials.Count != 1 {
-		t.Fatalf("trial count = %d", summary.Trials.Count)
+	for _, name := range []string{"scores.csv", "metrics.csv", "summary.json"} {
+		if _, err := os.Stat(filepath.Join(directory, name)); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
-func mustReport(t *testing.T, specs []trialSpec, legacy bool) *Report {
-	t.Helper()
-	report, err := NewReport(fixtureInputs(specs, legacy))
+func TestProfileRejectsDuplicateMetrics(t *testing.T) {
+	inputs := fixtureInputs()
+	inputs.RunRows[0].Profile.Metrics = append(inputs.RunRows[0].Profile.Metrics, inputs.RunRows[0].Profile.Metrics[0])
+	for i := range inputs.Trials {
+		inputs.Trials[i].Trial.Profile = inputs.RunRows[0].Profile
+	}
+	assertErrorContains(t, inputs, "invalid metric")
+}
+
+func TestCompletedDurableRunCanOutliveFailedOriginalExecution(t *testing.T) {
+	inputs := fixtureInputs()
+	inputs.CandidateExecution.Status = "FAILED"
+	inputs.CandidateExecution.CloseTime = "2026-01-01T00:00:30Z"
+	if _, err := NewReport(inputs); err != nil {
+		t.Fatalf("resumed durable run rejected: %v", err)
+	}
+}
+
+func TestFrozenCaseSelectionMismatchRejected(t *testing.T) {
+	inputs := fixtureInputs()
+	inputs.RunRows[0].SelectedCaseIDs[1] = "different-case"
+	assertErrorContains(t, inputs, "frozen Case selection")
+}
+
+func TestScoringResumePreservesPerTrialProvenance(t *testing.T) {
+	inputs := fixtureInputs()
+	inputs.ScoringExecutions[0].Status = "FAILED"
+	const resumed = "judge/resumed"
+	for i := range inputs.Scores {
+		if inputs.Scores[i].TrialID == "two" {
+			inputs.Scores[i].ScoringRunExecutionID = resumed
+			inputs.Scores[i].ScoringAttemptID = "resumed-two"
+		}
+	}
+	inputs.Metrics[1].ScoringRunExecutionID = resumed
+	inputs.Metrics[1].ScoringAttemptID = "resumed-two"
+	inputs.Attempts[1].ScoringRunExecutionID = resumed
+	inputs.Attempts[1].ScoringAttemptID = "resumed-two"
+	inputs.ScoringExecutions = append(inputs.ScoringExecutions, Execution{ID: resumed, Status: "COMPLETED", StartTime: "2026-01-01T00:03:00Z", CloseTime: "2026-01-01T00:04:00Z"})
+	report, err := NewReport(inputs)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return report
+	if len(report.Summary().Provenance.ScoringExecutionIDs) != 2 {
+		t.Fatalf("scoring executions = %#v", report.Summary().Provenance.ScoringExecutionIDs)
+	}
 }
 
 func assertErrorContains(t *testing.T, inputs Inputs, substring string) {
 	t.Helper()
 	_, err := NewReport(inputs)
 	if err == nil || !strings.Contains(err.Error(), substring) {
-		t.Fatalf("error = %v, want substring %q", err, substring)
+		t.Fatalf("error = %v, want %q", err, substring)
 	}
 }
 
@@ -197,198 +188,47 @@ func assertFloat(t *testing.T, value *float64, expected float64) {
 	}
 }
 
-func spec(id, expectedKind, predictedKind, expectedRelevance, predictedRelevance string, gateMet bool) trialSpec {
-	return specPtr(id, ptr(expectedKind), ptr(predictedKind), ptr(expectedRelevance), ptr(predictedRelevance), gateMet)
-}
-
-func specPtr(id string, expectedKind, predictedKind, expectedRelevance, predictedRelevance *string, gateMet bool) trialSpec {
-	return trialSpec{id: id, expectedKind: expectedKind, predictedKind: predictedKind, expectedRelevance: expectedRelevance, predictedRelevance: predictedRelevance, gateMet: gateMet}
-}
-
-func ptr(value string) *string { return &value }
-
-func fixtureInputs(specs []trialSpec, legacy bool) Inputs {
-	rubric := Rubric{SchemaVersion: 1, RubricID: "fixture-rubric", RubricVersion: 3, Criteria: []Criterion{
-		{CriterionID: "gate", Label: "gate", Weight: 0, HardGate: true},
-		{CriterionID: "kind", Label: "kind", Weight: 50, Metric: &Metric{Type: "classification", Labels: []string{"a", "b"}}},
-		{CriterionID: "relevance", Label: "relevance", Weight: 50, Metric: &Metric{Type: "classification", Labels: []string{"x", "y"}}},
-	}}
-	trials := make([]Trial, 0, len(specs))
-	var scores []ScoreRow
-	var details []TrialDetail
-	for index, item := range specs {
-		latency := Number(index + 1)
-		trial := Trial{
-			TrialID: item.id, CaseID: "case-" + item.id, TrialNumber: 1, Status: "completed",
-			CandidateSessionID: "candidate-session-" + item.id, CandidateAgentLatencySeconds: &latency,
-			CandidateCompletedAt: "2026-01-01T00:01:00Z", Rubric: rubric,
-			Oracle: Oracle{Criteria: map[string]OracleCriterion{
-				"gate": {Expected: "pass"}, "kind": {Expected: *item.expectedKind}, "relevance": {Expected: *item.expectedRelevance},
-			}},
-		}
-		trials = append(trials, trial)
-		results := map[string]string{"gate": "met", "kind": "missed", "relevance": "missed"}
-		if !item.gateMet {
-			results["gate"] = "missed"
-		}
-		if item.predictedKind != nil && *item.predictedKind == *item.expectedKind {
-			results["kind"] = "met"
-		}
-		if item.predictedRelevance != nil && *item.predictedRelevance == *item.expectedRelevance {
-			results["relevance"] = "met"
-		}
-		points := map[string]Number{"gate": 0}
-		if results["kind"] == "met" {
-			points["kind"] = 50
-		}
-		if results["relevance"] == "met" {
-			points["relevance"] = 50
-		}
-		trialScore := points["kind"] + points["relevance"]
-		if !item.gateMet {
-			trialScore = 0
-		}
-		for _, criterion := range rubric.Criteria {
-			scores = append(scores, ScoreRow{
-				SchemaVersion: 1, LabID: "999", EvaluationRunID: fixtureRunID, TrialID: trial.TrialID,
-				CaseID: trial.CaseID, TrialNumber: 1, CandidateSessionID: trial.CandidateSessionID,
-				JudgeRunExecutionID: fixtureJudgeID, JudgeSessionID: "judge-session-" + item.id,
-				RubricID: rubric.RubricID, RubricVersion: rubric.RubricVersion, CriterionID: criterion.CriterionID,
-				CriterionWeight: criterion.Weight, CriterionResult: results[criterion.CriterionID], CriterionPoints: points[criterion.CriterionID],
-				CriterionHardGate: criterion.HardGate, TrialHardFailed: !item.gateMet, TrialScore: trialScore,
-				Reason: "fixture", EvidenceRefs: []string{}, CandidateCompletedAt: trial.CandidateCompletedAt, JudgedAt: "2026-01-01T00:02:00Z",
-			})
-		}
-		if !legacy {
-			details = append(details, TrialDetail{
-				JudgeRunExecutionID: fixtureJudgeID,
-				DetailKey:           fixtureRunID + ":" + item.id, SchemaVersion: 1, LabID: "999", EvaluationRunID: fixtureRunID, TrialID: item.id,
-				CandidateAgentLatencySeconds: &latency, JudgeAgentLatencySeconds: Number(index + 2),
-				ExpectedLabels:  map[string]string{"kind": *item.expectedKind, "relevance": *item.expectedRelevance},
-				PredictedLabels: map[string]*string{"kind": item.predictedKind, "relevance": item.predictedRelevance},
-			})
-		}
+func fixtureInputs() Inputs {
+	profile := ScoringProfile{
+		SchemaVersion: 2, ProfileID: "fixture", ProfileVersion: 1,
+		Scorer: Scorer{Kind: "hybrid", WorkflowAlias: "fixture_scorer", JudgePreset: "judge"},
+		Criteria: []Criterion{
+			{CriterionID: "gate", Label: "gate", Type: "binary", HardGate: true, PassThreshold: 1},
+			{CriterionID: "quality", Label: "quality", Type: "numeric", Weight: 100, PassThreshold: 5, Range: &NumericRange{Min: 0, Max: 10}},
+		},
+		Metrics: []MetricDefinition{{MetricID: "verdict", Label: "verdict", Type: "classification", SourceCriterionID: "quality", Labels: []string{"good", "bad"}}},
 	}
-	run := EvaluationRun{SchemaVersion: 1, EvaluationRunID: fixtureRunID, LabID: "999", RubricID: rubric.RubricID, RubricVersion: rubric.RubricVersion, Trials: trials}
-	return Inputs{
-		LabID: "999", RunID: fixtureRunID, RunRows: []EvaluationRunRow{{EvaluationRunID: fixtureRunID, Run: run}},
-		Scores: scores, Details: details,
+	inputs := Inputs{
+		LabID: "999", RunID: fixtureRunID,
+		RunRows:            []EvaluationRunRow{{SchemaVersion: 2, EvaluationRunID: fixtureRunID, LabID: "999", ProfileID: profile.ProfileID, ProfileVersion: 1, Profile: profile, SelectedCaseIDs: []string{"case-one", "case-two"}, TemplateDigest: "fixture-digest", Status: "completed", ExpectedTrialCount: 2, CompletedTrialCount: 2, BatchSize: 4}},
 		CandidateExecution: Execution{ID: fixtureRunID, Status: "COMPLETED", StartTime: "2026-01-01T00:00:00Z", CloseTime: "2026-01-01T00:01:00Z"},
-		JudgeExecution:     Execution{ID: fixtureJudgeID, Status: "COMPLETED", StartTime: "2026-01-01T00:01:00Z", CloseTime: "2026-01-01T00:03:00Z"},
+		ScoringExecutions:  []Execution{{ID: fixtureScoringID, Status: "COMPLETED", StartTime: "2026-01-01T00:01:00Z", CloseTime: "2026-01-01T00:02:00Z"}},
 	}
-}
-
-func TestHistoricalRejudgeWithoutCandidateLatency(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("old", "a", "a", "x", "x", true)}, false)
-	inputs.RunRows[0].Run.Trials[0].CandidateAgentLatencySeconds = nil
-	inputs.Details[0].CandidateAgentLatencySeconds = nil
-	report, err := NewReport(inputs)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if report.Summary().Timing.AgentLatencySeconds.Candidate != nil {
-		t.Fatal("missing latency reported as measured")
-	}
-	assertFloat(t, report.Summary().Classification.Criteria["kind"].Accuracy, 1)
-	if !strings.Contains(report.TerminalReport(), "was not captured") {
-		t.Fatal("missing notice")
-	}
-}
-
-func TestMissingCapturedCandidateLatencyRejected(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
-	inputs.Details[0].CandidateAgentLatencySeconds = nil
-	assertErrorContains(t, inputs, "latency does not match")
-}
-
-func TestStaleTrialDetailsRejected(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
-	inputs.Details[0].JudgeRunExecutionID = "judge/previous-execution"
-	assertErrorContains(t, inputs, "detail identity is invalid")
-}
-
-func TestReservedAbstentionLabelRejected(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
-	inputs.RunRows[0].Run.Trials[0].Rubric.Criteria[1].Metric.Labels = []string{"a", AbstentionLabel}
-	assertErrorContains(t, inputs, "invalid labels")
-}
-
-func TestCandidateTimestampComparedAsInstant(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true)}, false)
-	for i := range inputs.Scores {
-		inputs.Scores[i].CandidateCompletedAt = "2025-12-31T19:01:00.000000-05:00"
-	}
-	if _, err := NewReport(inputs); err != nil {
-		t.Fatal(err)
-	}
-	inputs.Scores[0].CandidateCompletedAt = "2026-01-01T00:01:01Z"
-	assertErrorContains(t, inputs, "completion time does not match")
-}
-
-func TestSummaryTagsFromFrozenCases(t *testing.T) {
-	inputs := fixtureInputs([]trialSpec{spec("one", "a", "a", "x", "x", true), spec("two", "b", "b", "y", "y", true)}, false)
-	inputs.RunRows[0].Run.Trials[0].Submission.Case.Tags = []CaseTag{{Name: "rce"}, {Name: "CVE-2014-6271"}, {Name: ""}}
-	inputs.RunRows[0].Run.Trials[1].Submission.Case.Tags = []CaseTag{{Name: "rce"}, {Name: "CVE-2021-41773"}}
-	report, err := NewReport(inputs)
-	if err != nil {
-		t.Fatal(err)
-	}
-	got, err := json.Marshal(report.Summary().Tags)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(got) != `["CVE-2014-6271","CVE-2021-41773","rce"]` {
-		t.Fatalf("tags = %s", got)
-	}
-}
-
-func TestSummaryWithoutTagsHasEmptyArray(t *testing.T) {
-	report := mustReport(t, []trialSpec{spec("old", "a", "a", "x", "x", true)}, true)
-	data, err := json.Marshal(report.Summary())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(data), `"tags":[]`) {
-		t.Fatalf("summary = %s", data)
-	}
-}
-
-func TestSummaryTargetIdentity(t *testing.T) {
-	for _, test := range []struct {
-		name    string
-		targets []string
-		wantIDs string
-		wantID  string
-	}{
-		{"built-in", []string{"n8n"}, `["n8n"]`, `"n8n"`},
-		{"Vulhub", []string{"bash/CVE-2014-6271", "bash/CVE-2014-6271"}, `["bash/CVE-2014-6271"]`, `"bash/CVE-2014-6271"`},
-		{"multiple", []string{"python/CVE-2024-23334", "bash/CVE-2014-6271"}, `["bash/CVE-2014-6271","python/CVE-2024-23334"]`, `null`},
-		{"historical missing", []string{""}, `[]`, `null`},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			specs := make([]trialSpec, len(test.targets))
-			for i := range specs {
-				specs[i] = spec(string(rune('a'+i)), "a", "a", "x", "x", true)
+	for index, id := range []string{"one", "two"} {
+		value := Number(5 + index*5)
+		trial := Trial{TrialID: id, CaseID: "case-" + id, TrialNumber: 1, Status: "completed", CandidateSessionID: "candidate-" + id, CandidateCompletedAt: "2026-01-01T00:01:00Z", FinalAnswer: "answer", Profile: profile, Oracle: Oracle{"criteria": map[string]any{"gate": map[string]any{"expected": true}, "quality": map[string]any{"expected": 10}}}}
+		inputs.Trials = append(inputs.Trials, TrialRow{TrialKey: fixtureRunID + ":" + id, SchemaVersion: 2, LabID: "999", EvaluationRunID: fixtureRunID, TrialID: id, CaseID: trial.CaseID, TrialNumber: 1, Status: "completed", Trial: trial})
+		for sequence, event := range []struct {
+			kind  string
+			value any
+		}{{"final_answer", "answer"}, {"case", map[string]any{}}, {"comments", []any{}}} {
+			inputs.Evidence = append(inputs.Evidence, EvidenceRow{EvidenceKey: fixtureRunID + ":" + id + ":" + string(rune('0'+sequence)), SchemaVersion: 2, LabID: "999", EvaluationRunID: fixtureRunID, TrialID: id, Sequence: sequence, EvidenceType: event.kind, Evidence: event.value})
+		}
+		for _, criterion := range profile.Criteria {
+			criterionValue, points := Number(1), Number(0)
+			if criterion.CriterionID == "quality" {
+				criterionValue, points = value, value*10
 			}
-			inputs := fixtureInputs(specs, true)
-			for i, target := range test.targets {
-				inputs.RunRows[0].Run.Trials[i].Submission.Case.Payload.TargetID = target
-			}
-			report, err := NewReport(inputs)
-			if err != nil {
-				t.Fatal(err)
-			}
-			data, err := json.Marshal(report.Summary())
-			if err != nil {
-				t.Fatal(err)
-			}
-			var fields map[string]json.RawMessage
-			if err := json.Unmarshal(data, &fields); err != nil {
-				t.Fatal(err)
-			}
-			if string(fields["target_id"]) != test.wantID || string(fields["target_ids"]) != test.wantIDs {
-				t.Fatalf("target fields = %s / %s", fields["target_id"], fields["target_ids"])
-			}
-		})
+			inputs.Scores = append(inputs.Scores, ScoreRow{ScoreKey: fixtureRunID + ":" + id + ":" + criterion.CriterionID, SchemaVersion: 2, LabID: "999", EvaluationRunID: fixtureRunID, TrialID: id, CaseID: trial.CaseID, TrialNumber: 1, CandidateSessionID: trial.CandidateSessionID, ScoringRunExecutionID: fixtureScoringID, ScoringAttemptID: "attempt-" + id, JudgeSessionID: "judge-" + id, ProfileID: profile.ProfileID, ProfileVersion: 1, ScorerKind: "hybrid", ScorerWorkflowAlias: "fixture_scorer", CriterionID: criterion.CriterionID, CriterionType: criterion.Type, CriterionWeight: criterion.Weight, CriterionValue: criterionValue, CriterionPoints: points, CriterionHardGate: criterion.HardGate, CriterionPassed: true, TrialScore: value * 10, Reason: "fixture", EvidenceRefs: []string{}, CandidateCompletedAt: trial.CandidateCompletedAt, ScoredAt: "2026-01-01T00:02:00Z"})
+		}
+		label := `"good"`
+		expected := `"good"`
+		if id == "two" {
+			label, expected = `"bad"`, `"bad"`
+		}
+		inputs.Metrics = append(inputs.Metrics, MetricRow{MetricKey: fixtureRunID + ":" + id + ":verdict", SchemaVersion: 2, LabID: "999", EvaluationRunID: fixtureRunID, TrialID: id, CaseID: trial.CaseID, TrialNumber: 1, ScoringRunExecutionID: fixtureScoringID, ScoringAttemptID: "attempt-" + id, ProfileID: profile.ProfileID, ProfileVersion: 1, MetricID: "verdict", MetricType: "classification", Value: json.RawMessage(label), ExpectedValue: json.RawMessage(expected), ScoredAt: "2026-01-01T00:02:00Z"})
+		latency := Number(1)
+		inputs.Attempts = append(inputs.Attempts, ScoringAttempt{AttemptKey: fixtureRunID + ":" + id, SchemaVersion: 2, LabID: "999", EvaluationRunID: fixtureRunID, TrialID: id, ScoringRunExecutionID: fixtureScoringID, ScoringAttemptID: "attempt-" + id, ScorerKind: "hybrid", ScorerWorkflowAlias: "fixture_scorer", JudgeSessionID: "judge-" + id, Status: "completed", StartedAt: "2026-01-01T00:01:00Z", CompletedAt: "2026-01-01T00:02:00Z", ScorerLatencySeconds: &latency})
 	}
+	return inputs
 }

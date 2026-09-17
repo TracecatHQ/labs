@@ -22,11 +22,10 @@ Lab 001 builds a Splunk target from `target/splunk/` and the pinned dataset in
 `assets/dataset/`. Supply `assets/Splunk.License` and initialize submodules
 before starting it.
 
-After `just up 001`, create a least-privilege Splunk user restricted to the
-`investigation` index, mint an encrypted token in the installed Splunk MCP
-Server app, and set `SPLUNK_MCP_AUTHORIZATION=Bearer <token>` in the root
-`.env`. Terraform sends the header through a write-only attribute, so it is not
-stored in plan or state.
+`just deploy` creates a least-privilege Splunk user restricted to the
+`investigation` index, mints an encrypted token through the installed Splunk
+MCP Server app, and saves it in the ignored root `.env`. Terraform sends the
+header through a write-only attribute, so it is not stored in plan or state.
 
 ## Agent access
 
@@ -41,11 +40,9 @@ Run from the repository root:
 ```bash
 git submodule update --init --recursive
 just tracecat-up
-just init 001
-just up 001
-# Configure the Splunk user and SPLUNK_MCP_AUTHORIZATION here.
-just plan 001
-just apply 001
+just init
+just deploy
+just plan # reports zero changes after deployment
 just run 001
 just status 001 RUN_ID=<candidate-run-id>
 just judge 001 RUN_ID=<candidate-run-id>

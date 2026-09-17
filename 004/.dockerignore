@@ -1,0 +1,10 @@
+assets/LICENSE
+assets/NOTICE
+assets/README.md
+assets/source.json
+evals/
+scripts/
+terraform/
+tests/
+tracecat/
+README.md

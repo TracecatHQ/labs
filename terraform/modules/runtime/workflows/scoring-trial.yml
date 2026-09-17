@@ -1,0 +1,203 @@
+version: 1
+definition:
+  title: Scoring Trial
+  description: Dispatch, validate, and checkpoint one profile-selected scorer.
+  entrypoint:
+    ref: checkpoint_pending_attempt
+    expects:
+      evaluation_run_id:
+        type: str
+      lab_id:
+        type: str
+      scoring_run_execution_id:
+        type: str
+      trial:
+        type: dict
+  config:
+    timeout: 3600
+  actions:
+    - ref: checkpoint_pending_attempt
+      action: core.table.insert_row
+      args:
+        table: scoring_attempts
+        row_data:
+          attempt_key: ${{ FN.concat(TRIGGER.evaluation_run_id, ":", TRIGGER.trial.trial_id) }}
+          schema_version: 2
+          lab_id: ${{ TRIGGER.lab_id }}
+          evaluation_run_id: ${{ TRIGGER.evaluation_run_id }}
+          trial_id: ${{ TRIGGER.trial.trial_id }}
+          scoring_run_execution_id: ${{ TRIGGER.scoring_run_execution_id }}
+          scoring_attempt_id: ${{ FN.concat(TRIGGER.scoring_run_execution_id, ":", TRIGGER.trial.trial_id) }}
+          scorer_kind: ${{ TRIGGER.trial.profile.scorer.kind }}
+          scorer_workflow_alias: ${{ TRIGGER.trial.profile.scorer.workflow_alias }}
+          judge_session_id: null
+          status: pending
+          error: null
+          started_at: ${{ FN.utcnow(True) }}
+          completed_at: null
+          scorer_latency_seconds: null
+        upsert: true
+
+    - ref: run_scorer
+      action: core.workflow.execute
+      depends_on: [checkpoint_pending_attempt]
+      retry_policy:
+        max_attempts: 1
+        timeout: 1800
+      args:
+        workflow_alias: ${{ TRIGGER.trial.profile.scorer.workflow_alias }}
+        wait_strategy: wait
+        fail_strategy: all
+        trigger_inputs:
+          trial: ${{ TRIGGER.trial }}
+
+    - ref: validate_and_persist
+      action: core.script.run_python
+      depends_on: [run_scorer]
+      args:
+        timeout_seconds: 300
+        inputs:
+          evaluation_run_id: ${{ TRIGGER.evaluation_run_id }}
+          lab_id: ${{ TRIGGER.lab_id }}
+          trial: ${{ TRIGGER.trial }}
+          result: ${{ ACTIONS.run_scorer.result }}
+          scoring_run_execution_id: ${{ TRIGGER.scoring_run_execution_id }}
+          scoring_started_at: ${{ ACTIONS.checkpoint_pending_attempt.result.started_at }}
+          scored_at: ${{ FN.utcnow(True) }}
+        script: |
+          import math
+          from tracecat_registry import ctx
+
+
+          def expected_metric(trial, metric):
+              oracle = trial["oracle"]
+              if metric["metric_id"] in oracle.get("metrics", {}):
+                  return oracle["metrics"][metric["metric_id"]]
+              source = metric.get("source_criterion_id")
+              if source:
+                  criterion = oracle.get("criteria", {}).get(source, {})
+                  if "expected" in criterion:
+                      candidate = criterion["expected"]
+                      if metric["type"] in ("classification", "text") and isinstance(candidate, str):
+                          return candidate
+                      if metric["type"] == "numeric" and isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
+                          return candidate
+                      if metric["type"] == "boolean" and isinstance(candidate, bool):
+                          return candidate
+              return None
+
+
+          def validate_metric(metric, value):
+              kind = metric["type"]
+              if value is None:
+                  return
+              if kind in ("classification", "text"):
+                  if not isinstance(value, str):
+                      raise ValueError(f"metric {metric['metric_id']} must be a string")
+                  if kind == "classification" and value not in metric["labels"]:
+                      raise ValueError(f"metric {metric['metric_id']} has an unknown label")
+              elif kind == "numeric":
+                  if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                      raise ValueError(f"metric {metric['metric_id']} must be finite numeric")
+              elif kind == "boolean" and not isinstance(value, bool):
+                  raise ValueError(f"metric {metric['metric_id']} must be boolean")
+
+
+          def main(evaluation_run_id, lab_id, trial, result, scoring_run_execution_id, scoring_started_at, scored_at):
+              profile = trial["profile"]
+              if result.get("evaluation_error") is not None:
+                  raise ValueError(f"trial {trial['trial_id']} scorer error: {result['evaluation_error']}")
+              criteria = result.get("criteria")
+              metrics = result.get("metrics")
+              criterion_defs = {item["criterion_id"]: item for item in profile["criteria"]}
+              metric_defs = {item["metric_id"]: item for item in profile["metrics"]}
+              if not isinstance(criteria, list) or {item.get("criterion_id") for item in criteria} != set(criterion_defs) or len(criteria) != len(criterion_defs):
+                  raise ValueError(f"trial {trial['trial_id']} criterion coverage is invalid")
+              if not isinstance(metrics, list) or {item.get("metric_id") for item in metrics} != set(metric_defs) or len(metrics) != len(metric_defs):
+                  raise ValueError(f"trial {trial['trial_id']} metric coverage is invalid")
+              if profile["scorer"].get("judge_preset") and not result.get("judge_session_id"):
+                  raise ValueError(f"trial {trial['trial_id']} is missing judge_session_id")
+
+              normalized, hard_failed, total = [], False, 0.0
+              for scored in criteria:
+                  definition = criterion_defs[scored["criterion_id"]]
+                  value = scored.get("value")
+                  if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                      raise ValueError(f"criterion {definition['criterion_id']} must be finite numeric")
+                  if definition["type"] == "binary":
+                      minimum, maximum = 0.0, 1.0
+                      if value not in (0, 1):
+                          raise ValueError(f"binary criterion {definition['criterion_id']} must be 0 or 1")
+                  else:
+                      minimum, maximum = definition["range"]["min"], definition["range"]["max"]
+                  if value < minimum or value > maximum:
+                      raise ValueError(f"criterion {definition['criterion_id']} is outside its range")
+                  if not isinstance(scored.get("reason"), str) or not scored["reason"]:
+                      raise ValueError(f"criterion {definition['criterion_id']} has no reason")
+                  refs = scored.get("evidence_refs")
+                  if not isinstance(refs, list) or any(not isinstance(ref, str) for ref in refs):
+                      raise ValueError(f"criterion {definition['criterion_id']} has invalid evidence refs")
+                  passed = value >= definition["pass_threshold"]
+                  points = definition["weight"] * (value - minimum) / (maximum - minimum)
+                  hard_failed = hard_failed or bool(definition["hard_gate"] and not passed)
+                  total += points
+                  normalized.append((definition, scored, value, points, passed))
+
+              by_metric = {item["metric_id"]: item.get("value") for item in metrics}
+              expected_metrics = {}
+              for metric_id, definition in metric_defs.items():
+                  value = by_metric[metric_id]
+                  expected = expected_metric(trial, definition)
+                  validate_metric(definition, value)
+                  validate_metric(definition, expected)
+                  expected_metrics[metric_id] = expected
+
+              trial_total = 0.0 if hard_failed else total
+              attempt_id = f"{scoring_run_execution_id}:{trial['trial_id']}"
+              score_rows = []
+              for definition, scored, value, points, passed in normalized:
+                  score_rows.append({
+                      "score_key": f"{evaluation_run_id}:{trial['trial_id']}:{definition['criterion_id']}",
+                      "schema_version": 2, "lab_id": lab_id, "evaluation_run_id": evaluation_run_id,
+                      "trial_id": trial["trial_id"], "case_id": trial["case_id"], "trial_number": trial["trial_number"],
+                      "candidate_session_id": trial["candidate_session_id"],
+                      "scoring_run_execution_id": scoring_run_execution_id, "scoring_attempt_id": attempt_id,
+                      "judge_session_id": result.get("judge_session_id"), "profile_id": profile["profile_id"],
+                      "profile_version": profile["profile_version"], "scorer_kind": profile["scorer"]["kind"],
+                      "scorer_workflow_alias": profile["scorer"]["workflow_alias"], "criterion_id": definition["criterion_id"],
+                      "criterion_type": definition["type"], "criterion_weight": definition["weight"],
+                      "criterion_value": value, "criterion_points": points, "criterion_hard_gate": definition["hard_gate"],
+                      "criterion_passed": passed, "trial_hard_failed": hard_failed, "trial_score": trial_total,
+                      "reason": scored["reason"], "evidence_refs": scored["evidence_refs"],
+                      "candidate_completed_at": trial["candidate_completed_at"], "scored_at": scored_at,
+                  })
+              metric_rows = []
+              for metric_id, definition in metric_defs.items():
+                  metric_rows.append({
+                      "metric_key": f"{evaluation_run_id}:{trial['trial_id']}:{metric_id}",
+                      "schema_version": 2, "lab_id": lab_id, "evaluation_run_id": evaluation_run_id,
+                      "trial_id": trial["trial_id"], "case_id": trial["case_id"], "trial_number": trial["trial_number"],
+                      "scoring_run_execution_id": scoring_run_execution_id, "scoring_attempt_id": attempt_id,
+                      "profile_id": profile["profile_id"], "profile_version": profile["profile_version"],
+                      "metric_id": metric_id, "metric_type": definition["type"], "value": by_metric[metric_id],
+                      "expected_value": expected_metrics[metric_id], "scored_at": scored_at,
+                  })
+              attempt_row = {
+                  "attempt_key": f"{evaluation_run_id}:{trial['trial_id']}", "schema_version": 2,
+                  "lab_id": lab_id, "evaluation_run_id": evaluation_run_id, "trial_id": trial["trial_id"],
+                  "scoring_run_execution_id": scoring_run_execution_id, "scoring_attempt_id": attempt_id,
+                  "scorer_kind": profile["scorer"]["kind"], "scorer_workflow_alias": profile["scorer"]["workflow_alias"],
+                  "judge_session_id": result.get("judge_session_id"), "status": "completed", "error": None,
+                  "started_at": scoring_started_at, "completed_at": scored_at,
+                  "scorer_latency_seconds": result.get("scorer_latency_seconds"),
+              }
+
+              # Validate the complete normalized result before any durable write.
+              # Upserts make retry safe if a later table call fails transiently.
+              ctx.tables.insert_rows(table="evaluation_scores", rows_data=score_rows, upsert=True)
+              if metric_rows:
+                  ctx.tables.insert_rows(table="evaluation_metrics", rows_data=metric_rows, upsert=True)
+              ctx.tables.insert_rows(table="scoring_attempts", rows_data=[attempt_row], upsert=True)
+              return {"trial_id": trial["trial_id"], "score_row_count": len(score_rows), "metric_row_count": len(metric_rows)}
+
+  returns: ${{ ACTIONS.validate_and_persist.result }}

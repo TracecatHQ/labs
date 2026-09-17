@@ -31,8 +31,8 @@ type terraformOutput struct {
 	Value json.RawMessage `json:"value"`
 }
 
-func LoadTerraformOutputs(ctx context.Context, root, lab string) (TerraformOutputs, error) {
-	terraformDir := filepath.Join(root, lab, "terraform")
+func LoadTerraformOutputs(ctx context.Context, root string) (TerraformOutputs, error) {
+	terraformDir := filepath.Join(root, "terraform", "workspace")
 	command := exec.CommandContext(ctx, "terraform", "-chdir="+terraformDir, "output", "-json")
 	var stderr bytes.Buffer
 	command.Stderr = &stderr
@@ -53,7 +53,7 @@ func LoadTerraformOutputs(ctx context.Context, root, lab string) (TerraformOutpu
 	if !ok || json.Unmarshal(tables.Value, &result.TableIDs) != nil {
 		return TerraformOutputs{}, fmt.Errorf("Terraform output table_ids is missing or invalid")
 	}
-	for _, name := range []string{"evaluation_runs", "evaluation_scores"} {
+	for _, name := range []string{"evaluation_runs", "evaluation_trials", "evaluation_evidence", "evaluation_scores", "evaluation_metrics", "scoring_attempts"} {
 		if result.TableIDs[name] == "" {
 			return TerraformOutputs{}, fmt.Errorf("Terraform table output %s is missing", name)
 		}
@@ -178,9 +178,6 @@ func CollectInputs(ctx context.Context, client *APIClient, outputs TerraformOutp
 	if err != nil {
 		return Inputs{}, fmt.Errorf("load Candidate execution: %w", err)
 	}
-	if _, err := validateExecution(candidateExecution, runID, "Candidate"); err != nil {
-		return Inputs{}, err
-	}
 	runMessages, err := client.FetchRows(ctx, outputs.WorkspaceID, outputs.TableIDs["evaluation_runs"])
 	if err != nil {
 		return Inputs{}, fmt.Errorf("load Evaluation Runs: %w", err)
@@ -189,12 +186,21 @@ func CollectInputs(ctx context.Context, client *APIClient, outputs TerraformOutp
 	if err != nil {
 		return Inputs{}, fmt.Errorf("load evaluation scores: %w", err)
 	}
-	var detailMessages []json.RawMessage
-	if tableID := outputs.TableIDs["evaluation_trial_details"]; tableID != "" {
-		detailMessages, err = client.FetchRows(ctx, outputs.WorkspaceID, tableID)
-		if err != nil {
-			return Inputs{}, fmt.Errorf("load trial details: %w", err)
-		}
+	trialMessages, err := client.FetchRows(ctx, outputs.WorkspaceID, outputs.TableIDs["evaluation_trials"])
+	if err != nil {
+		return Inputs{}, fmt.Errorf("load evaluation trials: %w", err)
+	}
+	evidenceMessages, err := client.FetchRows(ctx, outputs.WorkspaceID, outputs.TableIDs["evaluation_evidence"])
+	if err != nil {
+		return Inputs{}, fmt.Errorf("load evaluation evidence: %w", err)
+	}
+	metricMessages, err := client.FetchRows(ctx, outputs.WorkspaceID, outputs.TableIDs["evaluation_metrics"])
+	if err != nil {
+		return Inputs{}, fmt.Errorf("load evaluation metrics: %w", err)
+	}
+	attemptMessages, err := client.FetchRows(ctx, outputs.WorkspaceID, outputs.TableIDs["scoring_attempts"])
+	if err != nil {
+		return Inputs{}, fmt.Errorf("load scoring attempts: %w", err)
 	}
 	runRows, err := decodeRows[EvaluationRunRow](runMessages)
 	if err != nil {
@@ -204,27 +210,42 @@ func CollectInputs(ctx context.Context, client *APIClient, outputs TerraformOutp
 	if err != nil {
 		return Inputs{}, fmt.Errorf("decode evaluation scores: %w", err)
 	}
-	details, err := decodeRows[TrialDetail](detailMessages)
+	trials, err := decodeRows[TrialRow](trialMessages)
 	if err != nil {
-		return Inputs{}, fmt.Errorf("decode trial details: %w", err)
+		return Inputs{}, fmt.Errorf("decode evaluation trials: %w", err)
 	}
-	judgeExecutionID := ""
+	evidence, err := decodeRows[EvidenceRow](evidenceMessages)
+	if err != nil {
+		return Inputs{}, fmt.Errorf("decode evaluation evidence: %w", err)
+	}
+	metrics, err := decodeRows[MetricRow](metricMessages)
+	if err != nil {
+		return Inputs{}, fmt.Errorf("decode evaluation metrics: %w", err)
+	}
+	attempts, err := decodeRows[ScoringAttempt](attemptMessages)
+	if err != nil {
+		return Inputs{}, fmt.Errorf("decode scoring attempts: %w", err)
+	}
+	judgeExecutionIDs := map[string]bool{}
 	for _, score := range scores {
 		if score.EvaluationRunID == runID {
-			judgeExecutionID = score.JudgeRunExecutionID
-			break
+			judgeExecutionIDs[score.ScoringRunExecutionID] = true
 		}
 	}
-	if judgeExecutionID == "" {
+	if len(judgeExecutionIDs) == 0 {
 		return Inputs{}, invalid("no Judge scores found; run: just judge %s RUN_ID=%s", labID, runID)
 	}
-	judgeExecution, err := client.FetchExecution(ctx, outputs.WorkspaceID, judgeExecutionID)
-	if err != nil {
-		return Inputs{}, fmt.Errorf("load Judge execution: %w", err)
+	judgeExecutions := make([]Execution, 0, len(judgeExecutionIDs))
+	for judgeExecutionID := range judgeExecutionIDs {
+		judgeExecution, err := client.FetchExecution(ctx, outputs.WorkspaceID, judgeExecutionID)
+		if err != nil {
+			return Inputs{}, fmt.Errorf("load Judge execution: %w", err)
+		}
+		judgeExecutions = append(judgeExecutions, judgeExecution)
 	}
 	return Inputs{
-		LabID: labID, RunID: runID, RunRows: runRows, Scores: scores, Details: details,
-		CandidateExecution: candidateExecution, JudgeExecution: judgeExecution,
+		LabID: labID, RunID: runID, RunRows: runRows, Trials: trials, Evidence: evidence, Scores: scores, Metrics: metrics, Attempts: attempts,
+		CandidateExecution: candidateExecution, ScoringExecutions: judgeExecutions,
 	}, nil
 }
 

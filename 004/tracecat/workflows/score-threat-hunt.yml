@@ -1,0 +1,121 @@
+version: 1
+definition:
+  title: Score Threat Hunt
+  description: Deterministically score one frozen Simbian public-sample Trial.
+  entrypoint:
+    ref: score
+    expects:
+      trial:
+        type: dict[str, Any]
+        description: Full frozen Trial, including Submission, Oracle, and Profile.
+  actions:
+    - ref: score
+      action: core.script.run_python
+      args:
+        inputs:
+          trial: ${{ TRIGGER.trial }}
+        script: |
+          import json
+          import math
+          from collections import defaultdict
+          from datetime import datetime, timezone
+
+          def canonical_timestamp(timestamp):
+              if timestamp is None:
+                  return None
+              value = str(timestamp).strip()
+              if not value:
+                  return None
+              if value.endswith("Z"):
+                  value = value[:-1] + "+00:00"
+              try:
+                  parsed = datetime.fromisoformat(value)
+              except ValueError:
+                  return None
+              if parsed.tzinfo is None:
+                  parsed = parsed.replace(tzinfo=timezone.utc)
+              else:
+                  parsed = parsed.astimezone(timezone.utc)
+              normalized = parsed.isoformat().replace("+00:00", "Z")
+              if "." not in normalized and normalized.endswith("Z"):
+                  normalized = normalized[:-1] + ".000000Z"
+              return normalized
+
+          def final_comment(submission):
+              comments = submission.get("comments") or []
+              if not comments:
+                  return ""
+              item = comments[-1]
+              return item.get("content", "") if isinstance(item, dict) else str(item)
+
+          def main(trial):
+              raw_answer = final_comment(trial.get("submission") or {})
+              try:
+                  answer = json.loads(raw_answer)
+              except (TypeError, ValueError, json.JSONDecodeError):
+                  answer = {}
+              timestamps = answer.get("timestamps", []) if isinstance(answer, dict) else []
+              if not isinstance(timestamps, list):
+                  timestamps = []
+              oracle = trial.get("oracle") or {}
+              flags = oracle.get("flags", [])
+              chains = oracle.get("chains", [])
+              tactics = list(oracle.get("tactic_ids", []))
+
+              step_tactics = {}
+              for chain in chains:
+                  chain_index = int(chain["chain_idx"])
+                  for step in chain.get("steps", []):
+                      step_tactics[(chain_index, int(step["step_idx"]))] = list(step.get("tactics", []))
+              submitted = set()
+              for timestamp in timestamps:
+                  normalized = canonical_timestamp(timestamp)
+                  if normalized is not None:
+                      submitted.add(normalized)
+
+              coverable = defaultdict(set)
+              detected = defaultdict(set)
+              flags_detected = 0
+              for flag in flags:
+                  key = (int(flag["chain_idx"]), int(flag["step_idx"]))
+                  narrative_steps = {int(item) for item in flag.get("narrative_steps") or []}
+                  coverable[key].update(narrative_steps)
+                  if canonical_timestamp(flag.get("value")) in submitted:
+                      detected[key].update(narrative_steps)
+                      flags_detected += 1
+              step_ratios = {
+                  key: len(detected.get(key, set()) & expected) / len(expected)
+                  for key, expected in coverable.items()
+                  if expected
+              }
+              tactic_scores = {}
+              for tactic in tactics:
+                  values = [ratio for key, ratio in step_ratios.items() if tactic in step_tactics.get(key, [])]
+                  tactic_scores[tactic] = sum(values) / len(values) if values else math.nan
+              visited = [value for value in tactic_scores.values() if not math.isnan(value)]
+              overall = sum(visited) / len(visited) if visited else 0.0
+              total = len(flags)
+              metrics = [
+                  {"metric_id": "coverage_overall", "value": overall},
+                  *[
+                      {"metric_id": "coverage_" + tactic.lower(), "value": value}
+                      for tactic, value in tactic_scores.items()
+                      if not math.isnan(value)
+                  ],
+                  {"metric_id": "flags_detected", "value": flags_detected},
+                  {"metric_id": "flags_total", "value": total},
+                  {"metric_id": "flags_percent", "value": flags_detected / total if total else 0.0},
+              ]
+              return {
+                  "evaluation_error": None,
+                  "judge_session_id": None,
+                  "scorer_latency_seconds": None,
+                  "criteria": [{
+                      "criterion_id": "hierarchical-coverage",
+                      "value": overall,
+                      "reason": "Deterministic hierarchical coverage across %d attack tactics; %d of %d flags matched." % (len(visited), flags_detected, total),
+                      "evidence_refs": ["submission.comments[-1]", "oracle.flags", "oracle.chains", "oracle.tactic_ids"],
+                  }],
+                  "metrics": metrics,
+              }
+  returns: ${{ ACTIONS.score.result }}

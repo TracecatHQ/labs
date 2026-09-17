@@ -66,10 +66,10 @@ Run the default n8n case:
 
 ```bash
 just tracecat-up
-just init 003
+just init
 just up 003
-just plan 003
-just apply 003
+just plan
+just apply
 just run 003
 just status 003 RUN_ID=<candidate-run-id>
 just judge 003 RUN_ID=<candidate-run-id>
@@ -77,7 +77,7 @@ just status 003 RUN_ID=<judge-run-id>
 just grade 003 RUN_ID=<candidate-run-id>
 ```
 
-Select another curated target before Candidate Run:
+Select another curated target before Run Evaluation:
 
 ```bash
 just up 003 target=langflow/CVE-2025-3248

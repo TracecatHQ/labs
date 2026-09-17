@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "secrets": [],
+  "agent_presets": [
+    {
+      "name": "Lab 006 Candidate",
+      "slug": "006-candidate",
+      "description": "Develops and tests one CTI detection.",
+      "instructions_file": "agent_presets/candidate.md",
+      "actions": [
+        "core.cases.create_comment",
+        "core.cases.get_case",
+        "core.cases.update_case",
+        "core.workflow.execute"
+      ]
+    },
+    {
+      "name": "Lab 006 Judge",
+      "slug": "006-judge",
+      "description": "Judges CTI alignment and Sigma quality; deterministic workflow grades all remaining checkpoints.",
+      "instructions_file": "agent_presets/judge.md",
+      "actions": [],
+      "retries": 1
+    }
+  ],
+  "workflows": [
+    {
+      "alias": "list_event_sources",
+      "file": "workflows/list-event-sources.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "get_event_source_schema",
+      "file": "workflows/get-event-source-schema.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "sample_event_source",
+      "file": "workflows/sample-event-source.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "validate_sigma_rule",
+      "file": "workflows/validate-sigma-rule.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "execute_sigma_rule",
+      "file": "workflows/execute-sigma-rule.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "search_cti_reports",
+      "file": "workflows/search-cti-reports.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "search_mitre_techniques",
+      "file": "workflows/search-mitre-techniques.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "search_sigma_rules",
+      "file": "workflows/search-sigma-rules.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "scratch_analysis",
+      "file": "workflows/scratch-analysis.yml",
+      "category": "agent_tool"
+    },
+    {
+      "alias": "score_cti_realm",
+      "file": "workflows/score-cti-realm.yml",
+      "category": "scorer"
+    }
+  ]
+}

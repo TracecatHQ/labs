@@ -1,0 +1,53 @@
+{
+  "schema_version": 2,
+  "profile_id": "lab-005-secrl",
+  "profile_version": 1,
+  "scorer": {
+    "kind": "hybrid",
+    "workflow_alias": "score_secrl",
+    "judge_preset": "005-judge"
+  },
+  "criteria": [
+    {
+      "criterion_id": "answer-correct",
+      "label": "Semantically correct final answer confirmed on reflection",
+      "type": "binary",
+      "weight": 0,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "judge_instruction": "Compare the designated final_answer with the Oracle expected answer using SecRL's fuzzy rules, then independently reflect on that decision. It is correct only when the reflection confirms it. Answers may differ in format or case and may include relevant context. More than 15 enumerated possibilities is incorrect; fewer than 10 including the answer is correct; use discretion for 10-15. Time answers may use an equivalent reasonable representation and URLs may differ only by scheme, www, or trailing slash."
+    },
+    {
+      "criterion_id": "discounted-partial-reward",
+      "label": "SecRL discounted solution-step reward",
+      "type": "numeric",
+      "weight": 100,
+      "hard_gate": false,
+      "pass_threshold": 1,
+      "range": {
+        "min": 0,
+        "max": 1
+      },
+      "judge_instruction": "If the reflected final-answer decision is correct, value is 1. Otherwise judge each Oracle solution step for key information not already present in the question, reflect on each decision, then apply SecRL's reverse-order discount with factor 0.4 while skipping the final-answer step."
+    }
+  ],
+  "metrics": [
+    {
+      "metric_id": "binary_success",
+      "label": "Reflected answer success",
+      "type": "boolean",
+      "source_criterion_id": "answer-correct"
+    },
+    {
+      "metric_id": "reward",
+      "label": "SecRL numeric reward",
+      "type": "numeric",
+      "source_criterion_id": "discounted-partial-reward"
+    },
+    {
+      "metric_id": "incident_id",
+      "label": "Incident identifier",
+      "type": "text"
+    }
+  ]
+}
