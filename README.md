@@ -113,6 +113,47 @@ Candidate workflows are a cooperative evaluation boundary. They may orchestrate
 prompts, skills, and agents, but must not read the evaluation tables or hidden
 Oracle data. Tracecat does not currently provide a per-workflow action sandbox.
 
+### Candidate environment interfaces
+
+The Candidate workflow and an agent-tool workflow serve different purposes.
+`NNN Candidate — Modify` is the user-editable orchestration surface that invokes
+the Candidate preset. An agent-tool workflow is fixed evaluation infrastructure
+that gives the Candidate a narrow interface to a containerized environment.
+Labs should use workflow-backed tools only when an MCP integration or a scoped
+native Tracecat action does not already provide the required interface.
+
+| Lab | Candidate environment interface | Workflow-backed Candidate tools |
+|---|---|---|
+| 001 | Splunk MCP integration | None; MCP exposes the investigation tools |
+| 002 | Native `core.duckdb.execute_sql` action | None |
+| 003 | Case content only | None; the Candidate writes a ModSecurity ruleset without deploying it |
+| 004 | Containerized threat-log database | `query_threat_logs` |
+| 005 | Eight incident-specific MySQL databases | `query_incident_sql` |
+| 006 | CTI corpus, event data, and Sigma execution service | `list_event_sources`, `get_event_source_schema`, `sample_event_source`, `search_cti_reports`, `search_mitre_techniques`, `search_sigma_rules`, `validate_sigma_rule`, `execute_sigma_rule`, and `scratch_analysis` |
+| 007 | Case context and ordered choices | None |
+
+Judge-only verifiers and scorer workflows are not Candidate tools. For example,
+Lab 003's Judge uses `validate_firewall_rule`, while deterministic and hybrid
+scorers remain under `Scoring`. Utilities such as `cleanup_firewall_rule` also
+remain internal. Folder placement and the `agent-tool`, `judge-tool`, `scorer`,
+and `utility` categories document this separation; they do not currently
+enforce it.
+
+Today, Labs 004, 005, and 006 grant the Candidate preset the generic
+`core.workflow.execute` action and name the supported workflow aliases in its
+instructions. This is a cooperative boundary: a Candidate that knows another
+workflow alias may be able to invoke it. It also makes tool discovery depend on
+prompt text and hand-written invocation envelopes.
+
+Tracecat's planned **attached workflows** support should use each manifest's
+`agent_tool` entries as the Candidate preset's workflow allowlist. An attached
+workflow should be presented to the agent with its description and input
+schema, and the agent should be able to execute only the workflows attached to
+that preset. `judge_tool`, `scorer`, and `utility` workflows must not be attached
+to Candidate presets. This will provide least-privilege workflow execution and
+remove brittle alias and envelope instructions while preserving the visible,
+modifiable Candidate workflow as the evaluation's orchestration surface.
+
 Large suites use cursor pagination and bounded batches. Adjust concurrency with
 `BATCH_SIZE=<n>`. To resume a stopped Run Evaluation workflow from its completed Trial
 checkpoints, rerun `just run NNN RUN_ID=<candidate-run-id>`; rerunning
