@@ -1,0 +1,19 @@
+README.md
+  s_1caaebf7a6e21e::t_ebe2a371916ea6 75-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9d7ac5fd655bfe18a37cc26381900cb5bee8e3cb",
+  "prompts": {},
+  "sessions": {
+    "s_1caaebf7a6e21e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0c458-7041-7201-8fd0-ef60fbdc753d",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Chris Lo <46541035+topher-lo@users.noreply.github.com>"
+    }
+  }
+}
