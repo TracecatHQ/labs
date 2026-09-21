@@ -72,13 +72,13 @@ Run commands from this repository's root.
 
 | Lab | Task | Scoring |
 |---|---|---|
-| [001](001/) | Investigate an EventBridge alert | True-positive gate + 16 weighted findings |
-| [002](002/) | Classify 20 BOTSv3 alerts | Evidence gate + determination and relevance |
-| [003](003/) | Write ModSecurity rules for one of eight targets | Deployability gate + malicious/benign tests |
-| [004](004/) | Hunt threats in Simbian logs | Narrative-step and tactic coverage |
-| [005](005/) | Answer 589 SecRL questions across eight databases | Answer success + solution-step reward |
-| [006](006/) | Build detections for 50 CTI-REALM objectives | Five trajectory and outcome checkpoints |
-| [007](007/) | Answer 50 SEvenLLM multiple-choice questions | Exact-choice accuracy |
+| [001](001/) | Investigate a LiteLLM / Trivy supply chain attack, starting from a single AWS alert | True-positive gate + 16 weighted findings |
+| [002](002/) | Triage 20 Splunk Boss of the SOC alerts: separate false alarms from threats and connect them to the intrusion | Evidence gate + determination and relevance |
+| [003](003/) | Turn vulnerability reports into firewall rules for seven Vulhub CVEs and an n8n file-read vulnerability | Deployability gate + malicious/benign tests |
+| [004](004/) | Uncover an attack chain hidden in 155,350 Windows events | Narrative-step and tactic coverage |
+| [005](005/) | Solve 589 investigation questions by digging through logs from eight security incidents | Answer success + solution-step reward |
+| [006](006/) | Turn threat intelligence into tested detection rules for 50 Linux, Kubernetes, and cloud scenarios | Five trajectory and outcome checkpoints |
+| [007](007/) | Put your agent’s security knowledge to the test with 50 multiple-choice challenges | Exact-choice accuracy |
 
 For another lab, follow its README for data preparation and target startup.
 
